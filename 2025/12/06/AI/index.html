@@ -4,7 +4,7 @@
 
 <head>
     <!-- hexo-inject:begin --><!-- hexo-inject:end --><meta charset="utf-8">
-    <meta name="keywords" content="Vscode_Error, Ab4nd0n">
+    <meta name="keywords" content="给 Hexo 博客添加AI摘要功能, Ab4nd0n">
     <meta name="description" content="记录学习，记录生活。">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -16,7 +16,7 @@
     <!-- Global site tag (gtag.js) - Google Analytics -->
 
 
-    <title>Vscode_Error | Ab4nd0n</title>
+    <title>给 Hexo 博客添加AI摘要功能 | Ab4nd0n</title>
     <link rel="icon" type="image/jpeg" href="/medias/touxiang.jpg">
 
     <link rel="stylesheet" type="text/css" href="/libs/awesome/css/all.css">
@@ -252,12 +252,12 @@
 
 
 
-<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/29.jpg')">
+<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/17.jpg')">
     <div class="container" style="right: 0px;left: 0px;">
         <div class="row">
             <div class="col s12 m12 l12">
                 <div class="brand">
-                    <h1 class="description center-align post-title">Vscode_Error</h1>
+                    <h1 class="description center-align post-title">给 Hexo 博客添加AI摘要功能</h1>
                 </div>
             </div>
         </div>
@@ -385,12 +385,16 @@
                     
                     <div class="article-tag">
                         
-                            <a href="/tags/Vscode/">
-                                <span class="chip bg-color">Vscode</span>
+                            <a href="/tags/Hexo/">
+                                <span class="chip bg-color">Hexo</span>
                             </a>
                         
-                            <a href="/tags/Synology/">
-                                <span class="chip bg-color">Synology</span>
+                            <a href="/tags/AI/">
+                                <span class="chip bg-color">AI</span>
+                            </a>
+                        
+                            <a href="/tags/DeepSeek/">
+                                <span class="chip bg-color">DeepSeek</span>
                             </a>
                         
                     </div>
@@ -401,8 +405,8 @@
                     <div class="post-cate">
                         <i class="fas fa-bookmark fa-fw icon-category"></i>
                         
-                            <a href="/categories/%E6%8A%A5%E9%94%99%E5%A4%84%E7%90%86/" class="post-category">
-                                报错处理
+                            <a href="/categories/%E6%8A%80%E6%9C%AF/" class="post-category">
+                                技术
                             </a>
                         
                     </div>
@@ -414,28 +418,28 @@
                 
                 <div class="post-date info-break-policy">
                     <i class="far fa-calendar-minus fa-fw"></i>发布日期:&nbsp;&nbsp;
-                    2025-08-06
+                    2025-12-06
                 </div>
                 
 
                 
                 <div class="post-date info-break-policy">
                     <i class="far fa-calendar-check fa-fw"></i>更新日期:&nbsp;&nbsp;
-                    2025-12-05
+                    2025-12-06
                 </div>
                 
 
                 
                 <div class="info-break-policy">
                     <i class="far fa-file-word fa-fw"></i>文章字数:&nbsp;&nbsp;
-                    834
+                    3k
                 </div>
                 
 
                 
                 <div class="info-break-policy">
                     <i class="far fa-clock fa-fw"></i>阅读时长:&nbsp;&nbsp;
-                    3 分
+                    12 分
                 </div>
                 
 
@@ -459,33 +463,361 @@
             <strong style="color: #3eaf7c; font-size: 1.1em;">AI 摘要</strong>
         </div>
         <div style="color: #666; line-height: 1.8; font-size: 0.95rem;">
-            本文分享了作者解决VSCode插件商店报错“XHR failed”的经历。问题源于系统环境变量中错误的HTTP_PROXY代理设置，导致VSCode无法联网。作者通过删除该变量并调整VSCode内部代理设置，成功恢复了网络连接。此外，这一发现还意外解决了其他软件（如Synology Chat客户端）因读取同一环境变量而无法登录的问题。文章提醒读者，遇到类似网络连接问题时，不妨检查系统环境变量设置。
+            本文记录了博主为Hexo博客从零添加“AI摘要”功能的完整全过程。文章详细展示了从最初的简易脚本，到解决API Key安全泄露、修复YAML格式崩溃、以及优化长文截断问题的三次迭代升级。最终提供了一个支持全量/增量更新、自动提取大纲、并能自动修复Markdown格式的通用版脚本，以及前端界面的实现方案。
         </div>
     </div>
 
-                <h3 id="一、问题概述"><a href="#一、问题概述" class="headerlink" title="一、问题概述"></a>一、问题概述</h3><blockquote>
-<p>vscode 获取扩展失败，XHR failed</p>
-</blockquote>
-<p>平时vscode只是用来跑一跑C/C++代码，最近想装一个插件的时候在插件商店搜索的时候却报错XHR failed，然后在网上查了查，似乎是连不上网，可能是代理出了问题。这才想起来似乎vscode好久没有给我推过版本更新或者推荐插件什么的了，可能是无法联网的原因。</p>
-<h3 id="二、解决方法"><a href="#二、解决方法" class="headerlink" title="二、解决方法"></a>二、解决方法</h3><p>网上的解决方法是修改vscode里的设置，将代理移除，但是我按照这种方法并不奏效。</p>
-<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/SUDA196/article/details/127104495">Win10解决vscode获取扩展失败，XHR failed（亲测可以解决）_苏打不会碱的博客-CSDN博客</a></p>
-<p>后来在查找解决方法的时候偶然发现了这篇文章：</p>
-<p><a target="_blank" rel="noopener" href="https://www.cnblogs.com/joyzen/p/13815384.html">VS Code代理设置错误 - 许你一世煙花 - 博客园 (cnblogs.com)</a></p>
-<p>里面提到：</p>
-<blockquote>
-<p>VS Code会去读取系统变量HTTP_PROXY的值设置为代理地址，去查了下系统环境变量设置里面果真有这个变量，删除后即可解决VS Code商店连不上的问题</p>
-</blockquote>
-<p>按照他的方法我确实在电脑上找到了HTTP＿PROXY（我的是小写）这个系统变量，并且它的值是127.0.0.1:32100(可能是这样，删的果断了点没太记住)。按道理来说我的代理的端口是7890，显然他这里的端口值不太对，我没有去修改而是直接删除了这个变量。</p>
-<p>删除后我尝试重启vscode，试了下发现还是连不上网，发现是因为我的vscode设置中设置了代理<code>http://127.0.0.1:7890</code>，但是我此时并没有开启代理，将代理开启后就可以正常联网了。</p>
-<p><img src="https://aband0n.oss-cn-nanjing.aliyuncs.com/img/image-20230806154211788.png" alt="image-20230806154211788"></p>
-<p>当然，如果不想开代理的话就将上面的<code>http://127.0.0.1:7890</code>删除，这样不开代理的情况下也可以正常联网。</p>
-<h3 id="三、意外收获"><a href="#三、意外收获" class="headerlink" title="三、意外收获"></a>三、意外收获</h3><p>上面那篇文章中还提到了一点：</p>
-<blockquote>
-<p>同时还发现HTTP_PROXY这个环境变量还被被其他软件环境读取作为代理地址，比如yarn，造成依赖下载被代理到指定地址导致失败。</p>
-</blockquote>
-<p>其他软件也会读取HTTP_PROXY这个环境变量作为代理地址，突然想起之前自己电脑在使用群晖chat（Synology chat）的时候客户端一直无法正常登录，但是使用虚拟机或者其他人的电脑就可以正常登录，很奇怪，当时怀疑是自己电脑某个端口或者设置导致的，但是在网上搜索了很久都没有找到解决方案，一直搁置，使用的网页版。</p>
-<p>所以我突然想到会不会当时无法登录也是因为这个环境变量呢？抱着试一试的心态打开客户端登录了一下，发现居然登陆成功了！害人不浅啊这个环境变量！<span class="github-emoji" style="color: transparent;background:no-repeat url(https://github.githubassets.com/images/icons/emoji/unicode/1f62d.png?v8) center/contain" data-src="https://github.githubassets.com/images/icons/emoji/unicode/1f62d.png?v8">😭</span></p>
-<p>所以如果你有某些软件一直登录不成功，不妨也检查一下自己的环境变量。</p>
+                <p>最近浏览技术博客时，发现像CSDN都会有 **AI 摘要 ** 功能，觉得还算是一个实用的功能，所以作为一个热衷于折腾 Hexo 的博主，我也决定动手给自己的博客加上这个功能。</p>
+<p>本以为写个脚本调用一下 API 是件很简单的事，结果实际操作中踩了不少坑：<strong>API Key 泄露风险、YAML 格式解析报错、长文章摘要不准确…</strong></p>
+<p>这篇文章将详细复盘我从“原始版本”到“终极通用版本”的开发全过程，并附上完整的代码和配置教程。</p>
+<h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><p>在开始写代码之前，我们需要准备好环境和工具。</p>
+<h3 id="1-申请-API"><a href="#1-申请-API" class="headerlink" title="1. 申请 API"></a>1. 申请 API</h3><p>考虑到成本和中文理解能力，我选择了 **DeepSeek (深度求索)**。它的 API 完全兼容 OpenAI 格式，价格极低（写这篇博客时大约是 GPT-4 的百分之一），且拥有 64K 的超大上下文窗口，非常适合用来读长篇博客。</p>
+<ul>
+<li>去 <a target="_blank" rel="noopener" href="https://platform.deepseek.com/">DeepSeek 开放平台</a> 申请 API Key。</li>
+</ul>
+<h3 id="2-安装依赖"><a href="#2-安装依赖" class="headerlink" title="2. 安装依赖"></a>2. 安装依赖</h3><p>我们需要在 Hexo 根目录下安装几个 Node.js 库：</p>
+<pre><code class="line-numbers language-bash"># 1. OpenAI SDK (用于调用大模型)
+# 2. dotenv (用于安全读取环境变量)
+# 3. gray-matter (用于解析和生成 Markdown 的 Front-matter)
+npm install openai dotenv gray-matter
+</code></pre>
+<h2 id="具体实现"><a href="#具体实现" class="headerlink" title="具体实现"></a>具体实现</h2><h3 id="1-创建自动化脚本"><a href="#1-创建自动化脚本" class="headerlink" title="1.创建自动化脚本"></a>1.创建自动化脚本</h3><p>在博客根目录的 <code>scripts</code> 文件夹下（如果没有就新建一个 <code>scripts</code> 文件夹），新建一个文件 <code>ai_summary.js</code>。</p>
+<p>复制以下代码进去：</p>
+<pre><code class="line-numbers language-javascript">/**
+ * Hexo AI Summary Generator
+ * 使用方法: hexo ai
+ */
+const { OpenAI } = require("openai");
+const fs = require("fs");
+const path = require("path");
+const matter = require("gray-matter"); // Hexo 自带了 gray-matter，无需额外安装
+
+// ================= 配置区域 =================
+const API_KEY = "sk-xxxxxxxxxxxxxxxxxxxxxxxx"; // 🔴 替换成你的 API Key
+const API_BASE_URL = "https://api.deepseek.com"; // 如果用 OpenAI 则不用改，用 DeepSeek 请填这个
+const MODEL_NAME = "deepseek-chat"; // 模型名称
+// ===========================================
+
+const client = new OpenAI({
+  apiKey: API_KEY,
+  baseURL: API_BASE_URL,
+});
+
+hexo.extend.console.register("ai", "自动生成 AI 摘要", async function (args) {
+  const posts = hexo.locals.get("posts").data;
+  const log = hexo.log;
+
+  log.info("🤖 正在启动 AI 摘要生成助手...");
+
+  for (let i = 0; i &lt; posts.length; i++) {
+    const post = posts[i];
+    const fullPath = post.full_source;
+
+    // 1. 读取文件内容
+    const fileContent = fs.readFileSync(fullPath, "utf8");
+    const parsed = matter(fileContent);
+
+    // 2. 检查是否已经存在 ai_summary
+    if (parsed.data.ai_summary) {
+      // log.info(`[跳过] 已存在摘要: ${post.title}`);
+      continue;
+    }
+
+    log.info(`[处理中] 正在为文章生成摘要: ${post.title}`);
+
+    // 3. 提取纯文本用于发送给 AI (去掉 Markdown 符号，截取前 1000 字以节省 Token)
+    const cleanContent = post.content.replace(/&lt;[^&gt;]+&gt;/g, "").slice(0, 1000);
+
+    try {
+      // 4. 调用 API
+      const completion = await client.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: "你是一个博客摘要助手。请用一段通俗易懂的中文总结以下文章的核心内容，字数控制在 80-120 字之间，不要使用markdown格式，不要有多余的废话。",
+          },
+          { role: "user", content: cleanContent },
+        ],
+        model: MODEL_NAME,
+      });
+
+      const summary = completion.choices[0].message.content.trim();
+
+      // 5. 将摘要写入 Front-matter
+      // 我们使用字符串替换的方式，避免重组导致格式混乱
+      const newContent = fileContent.replace(
+        /^---\n([\s\S]+?)\n---/,
+        `---\n$1\nai_summary: ${summary}\n---`
+      );
+
+      fs.writeFileSync(fullPath, newContent, "utf8");
+      log.info(`✅ [成功] 摘要已写入: ${post.title}`);
+
+    } catch (error) {
+      log.error(`❌ [失败] ${post.title}: ${error.message}`);
+    }
+  }
+
+  log.info("🎉 所有文章处理完毕！请检查 md 文件。");
+});
+</code></pre>
+<h3 id="2-运行生成"><a href="#2-运行生成" class="headerlink" title="2.运行生成"></a>2.运行生成</h3><p>在终端运行：</p>
+<pre><code class="line-numbers language-bash">hexo ai
+</code></pre>
+<p>会看到脚本开始逐个处理没有摘要的文章，并自动修改 <code>source/_posts/</code> 下的 <code>.md</code> 文件，在头部增加 <code>ai_summary: 你的摘要内容</code>。</p>
+<h3 id="3-展示在页面上"><a href="#3-展示在页面上" class="headerlink" title="3.展示在页面上"></a>3.展示在页面上</h3><p>你需要修改你的 <strong>主题文件</strong> 来把这个摘要显示出来。 找到你的主题文件夹下的文章模板，通常在 <code>themes/你的主题/layout/_partial/post/</code> 目录下，文件名可能是 <code>intro.ejs</code> 或 <code>article.ejs</code>。</p>
+<p>以 <strong>Hexo-Matery</strong> 或常见主题为例，通常修改 <code>themes/主题名/layout/_partial/post-detail.ejs</code> 文件。</p>
+<p>在 <code>&lt;%- page.content %&gt;</code> 之前插入以下代码：</p>
+<pre><code class="line-numbers language-html">&lt;% if (page.ai_summary) { %&gt;
+    &lt;style&gt;
+        .ai-summary-card {
+            background: #f6f8fa;
+            border-left: 4px solid #3eaf7c;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-size: 15px;
+            color: #555;
+            line-height: 1.6;
+        }
+        .ai-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+    &lt;/style&gt;
+
+    &lt;div class="ai-summary-card"&gt;
+        &lt;div class="ai-title"&gt;🤖 AI 摘要&lt;/div&gt;
+        &lt;div&gt;&lt;%= page.ai_summary %&gt;&lt;/div&gt;
+    &lt;/div&gt;
+&lt;% } %&gt;
+</code></pre>
+<h3 id="完成！"><a href="#完成！" class="headerlink" title="完成！"></a>完成！</h3><p>以后写完新文章：</p>
+<ol>
+<li><code>hexo ai</code> (生成摘要)</li>
+<li><code>hexo s</code> (本地预览)</li>
+<li><code>hexo g -d</code> (部署上线)</li>
+</ol>
+<h2 id="改进"><a href="#改进" class="headerlink" title="改进"></a>改进</h2><h3 id="V1-0：原始版本"><a href="#V1-0：原始版本" class="headerlink" title="V1.0：原始版本"></a>V1.0：原始版本</h3><p>最初的想法很简单：读取文件 -&gt; 调用 API -&gt; 把摘要替换进文件头。</p>
+<p><strong>原始代码片段：</strong></p>
+<pre><code class="line-numbers language-javascript">// scripts/ai_summary.js (V1)
+const API_KEY = "sk-xxxxxxxx"; // &lt;--- 致命错误：直接硬编码 Key
+// ...
+const cleanContent = post.content.replace(/&lt;[^&gt;]+&gt;/g, "").slice(0, 1000); // &lt;--- 问题：只截取了前1000字
+// ...
+// 简单的正则替换
+const newContent = fileContent.replace(/^---\n([\s\S]+?)\n---/, `---\n$1\nai_summary: ${summary}\n---`);
+</code></pre>
+<p><strong>问题：</strong></p>
+<ol>
+<li><strong>安全隐患</strong>：如果我把这个文件 push 到 GitHub，API Key 就直接泄露了。</li>
+<li><strong>内容截断</strong>：<code>slice(0, 1000)</code> 导致对于长篇技术文章，AI 只能读到前言，生成的摘要完全抓不住重点。</li>
+<li><strong>格式脆弱</strong>：简单的正则替换容易破坏原本复杂的 Front-matter 结构。</li>
+</ol>
+<h3 id="V2-0：安全性与稳定性的修复"><a href="#V2-0：安全性与稳定性的修复" class="headerlink" title="V2.0：安全性与稳定性的修复"></a>V2.0：安全性与稳定性的修复</h3><p>针对 V1 的问题，我进行了第一次重构。</p>
+<h4 id="1-解决-Key-泄露-配置环境变量"><a href="#1-解决-Key-泄露-配置环境变量" class="headerlink" title="1. 解决 Key 泄露 (配置环境变量)"></a>1. 解决 Key 泄露 (配置环境变量)</h4><p>在博客根目录新建 <code>.env</code> 文件：</p>
+<pre><code class="line-numbers language-bash">AI_API_KEY=sk-your-actual-api-key-here
+</code></pre>
+<p><strong>⚠️ 极其重要：</strong> 修改 <code>.gitignore</code> 文件，添加一行：</p>
+<pre><code class="line-numbers language-bash">.env
+</code></pre>
+<p>这样 Git 就会忽略这个文件，确保 Key 永远保存在本地。</p>
+<h4 id="2-解决-YAML-解析崩溃"><a href="#2-解决-YAML-解析崩溃" class="headerlink" title="2. 解决 YAML 解析崩溃"></a>2. 解决 YAML 解析崩溃</h4><p>在运行脚本时，我遇到了 <code>YAMLException: can not read a block mapping entry</code> 报错。原因是部分老文章的 Front-matter 里使用了 <strong>Tab 键</strong> 缩进，而标准的 YAML 只允许空格。</p>
+<p>✅ 解决方案：</p>
+<p>使用 gray-matter 库的 stringify 方法。它不仅能解析，还能把对象重新组装成标准的 YAML 格式字符串，自动修复缩进问题。</p>
+<h3 id="V3-0：上下文扩容与大纲提取"><a href="#V3-0：上下文扩容与大纲提取" class="headerlink" title="V3.0：上下文扩容与大纲提取"></a>V3.0：上下文扩容与大纲提取</h3><p>在查看AI生成的摘要时，我发现 AI 的总结很局限，基本只是根据文章的前一小部分文字进行总结，而不是完整的文章，导致总结出来的内容很局限；另外，像LeetCode刷题记录那篇文章，因为题目数量众多，上下文很长，所以很难将完整的文章喂给大模型。</p>
+<p><strong>✅ 优化策略：</strong></p>
+<ol>
+<li><strong>扩大窗口</strong>：DeepSeek 支持 64K Context，我将截取限制从 1k 提升到 <strong>50k</strong> 字符。</li>
+<li><strong>提取大纲</strong>：用正则抓取所有的 <code>## 标题</code>， 利用正则 <code>match(/^#{1,4} .+/gm)</code> 提取文章的层级目录（Outline），在 Prompt 中先告诉 AI 这篇文章的结构。</li>
+<li><strong>过滤代码</strong>：刷题文章代码量巨大且消耗 Token，使用 <code>replace</code> 将代码块 ```…``` 替换为占位符 <code>[代码块]</code>，让 AI 专注阅读解题思路。</li>
+</ol>
+<h3 id="V4-0：增量更新与全量更新"><a href="#V4-0：增量更新与全量更新" class="headerlink" title="V4.0：增量更新与全量更新"></a>V4.0：增量更新与全量更新</h3><p><strong>增量更新</strong>指的是当我们新写了一篇文章的时候只需要生成这一篇文章的摘要，而不需要将之前生成过的文章摘要再重新生成一遍，这个功能主要是通过检查是否已经存在<code>ai_summary</code>去实现。</p>
+<pre><code>    // 2. 检查是否已经存在 ai_summary
+    if (parsed.data.ai_summary) {
+      // log.warn(`⚠️ [跳过] ...`); 
+      continue; // &lt;--- 关键在这里！
+    }
+</code></pre>
+<p>这段代码的意思是：</p>
+<ol>
+<li>脚本启动后，会扫描所有文章。在处理每一篇文章前，它会先检查 Markdown 文件的头部（Front-matter）里有没有 <code>ai_summary</code> 这个字段。</li>
+<li><strong>如果已经有了：</strong> 直接执行 <code>continue</code>，<strong>跳过</strong>当前循环，不调用 API，不扣费，直接看下一篇。</li>
+<li><strong>如果没有（比如你刚写的新文章）：</strong> 才会继续往下走，调用 DeepSeek API 生成摘要并写入。</li>
+</ol>
+<p>但是在一些场景下还是需要全量更新，例如生成效果不好希望重新生成，所以我又加了一个全量更新的功能。</p>
+<p><strong>支持 <code>-f</code> 参数</strong>：如果不加 <code>-f</code>，它就是增量更新（省钱）；加了 <code>-f</code>，它会无视是否存在摘要，强制把所有文章重新“读”一遍并生成新的摘要。</p>
+<h2 id="终版"><a href="#终版" class="headerlink" title="终版"></a>终版</h2><p>结合了以上所有经验，这是最终的脚本。把它保存为 <code>scripts/ai_summary.js</code>。</p>
+<p><strong>功能亮点：</strong></p>
+<ul>
+<li><ol>
+<li>支持增量更新 (默认) 和 全量强制更新 (hexo ai -f)</li>
+</ol>
+</li>
+<li><ol start="2">
+<li>智能大纲：自动提取 Markdown 标题，辅助 AI 理解文章结构</li>
+</ol>
+</li>
+<li><ol start="3">
+<li>超大上下文：支持 5万字符的长文读取</li>
+</ol>
+</li>
+<li><ol start="4">
+<li>通用化：既适合 LeetCode 刷题集，也适合普通技术/生活文章</li>
+</ol>
+</li>
+<li><ol start="5">
+<li>格式修复：自动标准化 YAML 头部的缩进问题</li>
+</ol>
+</li>
+</ul>
+<pre><code class="line-numbers language-javascript">/**
+ * Hexo AI Summary Generator (Universal Pro)
+ * * 功能亮点：
+ * 1. 支持增量更新 (默认) 和 全量强制更新 (hexo ai -f)
+ * 2. 智能大纲：自动提取 Markdown 标题，辅助 AI 理解文章结构
+ * 3. 超大上下文：支持 5万字符的长文读取
+ * 4. 通用化：既适合 LeetCode 刷题集，也适合普通技术/生活文章
+ * 5. 格式修复：自动标准化 YAML 头部的缩进问题
+ */
+const { OpenAI } = require("openai");
+const fs = require("fs");
+const path = require("path");
+const matter = require("gray-matter");
+
+require('dotenv').config();
+
+// ================= 配置区域 =================
+const API_KEY = process.env.AI_API_KEY; 
+const API_BASE_URL = "https://api.deepseek.com"; 
+const MODEL_NAME = "deepseek-chat"; 
+// ===========================================
+
+if (!API_KEY) {
+    console.error("❌ 错误: 未找到 API Key。请在根目录 .env 文件中配置 AI_API_KEY。");
+    process.exit(1);
+}
+
+const client = new OpenAI({
+  apiKey: API_KEY,
+  baseURL: API_BASE_URL,
+});
+
+hexo.extend.console.register("ai", "自动生成 AI 摘要", {
+  options: [
+    { name: '-f, --force', desc: 'Force regenerate all summaries' } // 👈 全量更新开关在这里
+  ]
+}, async function (args) {
+  const log = this.log;
+  // 获取命令行参数，判断是否开启强制模式
+  const isForceMode = args.f || args.force;
+
+  log.info("📚 正在加载文章数据...");
+  await this.load();
+
+  const posts = this.locals.get("posts").toArray();
+  
+  if (posts.length === 0) {
+    log.warn("⚠️  没有找到任何文章。");
+    return;
+  }
+
+  log.info(`🤖 AI 摘要助手启动 | 模式: ${isForceMode ? '🔥 强制全量更新 (覆盖旧摘要)' : '⚡ 增量更新 (跳过已生成)'}`);
+
+  let count = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  for (const post of posts) {
+    const fullPath = post.full_source;
+    let fileContent, parsed;
+
+    try {
+        fileContent = fs.readFileSync(fullPath, "utf8");
+        parsed = matter(fileContent);
+    } catch (e) {
+        log.warn(`⚠️ [解析失败] 跳过: ${post.title}`);
+        failed++;
+        continue;
+    }
+
+    // === 逻辑判断 ===
+    // 只有在 "非强制模式" 且 "摘要已存在" 时才跳过
+    if (!isForceMode &amp;&amp; parsed.data.ai_summary) {
+      skipped++;
+      continue;
+    }
+
+    log.info(`[分析中] ${post.title}...`);
+
+    // === 1. 提取大纲 (标题) ===
+    const headings = parsed.content.match(/^#{1,4} .+/gm) || [];
+    const outline = headings.length &gt; 0 ? headings.join("\n") : "（无显式标题结构）";
+
+    // === 2. 内容清洗 ===
+    let processingContent = parsed.content;
+    // 替换代码块为占位符，减少 Token 消耗，让 AI 专注逻辑
+    processingContent = processingContent.replace(/```[\s\S]*?```/g, "\n[此处为代码块]\n");
+    // 去除 HTML
+    processingContent = processingContent.replace(/&lt;[^&gt;]+&gt;/g, "");
+    // 压缩空行
+    processingContent = processingContent.replace(/[\r\n]+/g, "\n").trim();
+    
+    const cleanContent = processingContent.slice(0, 50000);
+
+    // === 3. 组合 Prompt (通用版) ===
+    const finalUserContent = `
+文章标题: ${post.title}
+
+文章大纲结构:
+${outline}
+
+文章正文内容:
+${cleanContent}
+    `.trim();
+
+    try {
+      const completion = await client.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: "你是一个专业的博客摘要助手。请根据提供的【文章大纲】和【正文内容】，生成一段通俗流畅的中文摘要。\n\n要求：\n1. 如果文章是技术/刷题类，请概括核心算法或解决的问题。\n2. 如果文章是感悟/杂谈类，请总结作者的核心观点。\n3. 字数控制在 80-150 字。\n4. 直接输出纯文本，不要使用Markdown格式，不要包含代码。",
+          },
+          { role: "user", content: finalUserContent },
+        ],
+        model: MODEL_NAME,
+      });
+
+      const summary = completion.choices[0].message.content.trim();
+
+      // === 4. 回写文件 ===
+      parsed.data.ai_summary = summary;
+      const newFileContent = matter.stringify(parsed.content, parsed.data);
+      fs.writeFileSync(fullPath, newFileContent, "utf8");
+      
+      log.info(`✅ [已更新] ${post.title}`);
+      count++;
+
+    } catch (error) {
+      log.error(`❌ [API 错误] ${post.title}: ${error.message}`);
+      failed++;
+    }
+  }
+
+  log.info(`🎉 任务结束! 更新: ${count} | 跳过: ${skipped} | 失败: ${failed}`);
+});
+</code></pre>
+<hr>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>现在，我的博客可以很简单的实现AI摘要功能：</p>
+<ol>
+<li><strong>写完新文章</strong>：在终端运行 <code>hexo ai</code>，脚本会自动检测新文章，几秒钟生成摘要。</li>
+<li><strong>想要刷新旧文章</strong>：运行 <code>hexo ai -f</code>，全量重新生成。</li>
+<li><strong>部署</strong>：<code>hexo g -d</code>。</li>
+</ol>
+<p>这个折腾过程虽然曲折，但最终不仅实现了一个实用的功能，还顺手把博客里历史遗留的 YAML 格式问题全修好了。如果你也是 Hexo 用户，强烈推荐尝试！</p>
 <script>
         document.querySelectorAll('.github-emoji')
           .forEach(el => {
@@ -529,7 +861,7 @@
                     </i>
                 </span>
                 <span class="reprint-info">
-                    <a href="http://kongcm.cn/2025/08/06/Vscode-Error/">http://kongcm.cn/2025/08/06/Vscode-Error/</a>
+                    <a href="http://kongcm.cn/2025/12/06/AI/">http://kongcm.cn/2025/12/06/AI/</a>
                 </span>
             </div>
             <div class="reprint__notice">
@@ -567,12 +899,16 @@
                     
                         <div class="article-tag">
                             
-                                <a href="/tags/Vscode/">
-                                    <span class="chip bg-color">Vscode</span>
+                                <a href="/tags/Hexo/">
+                                    <span class="chip bg-color">Hexo</span>
                                 </a>
                             
-                                <a href="/tags/Synology/">
-                                    <span class="chip bg-color">Synology</span>
+                                <a href="/tags/AI/">
+                                    <span class="chip bg-color">AI</span>
+                                </a>
+                            
+                                <a href="/tags/DeepSeek/">
+                                    <span class="chip bg-color">DeepSeek</span>
                                 </a>
                             
                         </div>
@@ -1014,9 +1350,68 @@
 <article id="prenext-posts" class="prev-next articles">
     <div class="row article-row">
         
-        <div class="article col s12 m6" data-aos="fade-up">
+        <div class="article col s12 m6" data-aos="fade-up" data-aos="fade-up">
             <div class="article-badge left-badge text-color">
-                <i class="fas fa-chevron-left"></i>&nbsp;上一篇</div>
+                <i class="far fa-dot-circle"></i>&nbsp;本篇
+            </div>
+            <div class="card">
+                <a href="/2025/12/06/AI/">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/17.jpg" class="responsive-img" alt="给 Hexo 博客添加AI摘要功能">
+                        
+                        <span class="card-title">给 Hexo 博客添加AI摘要功能</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            在Hexo博客中添加AI总结功能
+                        
+                    </div>
+                    <div class="publish-info">
+                            <span class="publish-date">
+                                <i class="far fa-clock fa-fw icon-date"></i>2025-12-06
+                            </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-bookmark fa-fw icon-category"></i>
+                            
+                            <a href="/categories/%E6%8A%80%E6%9C%AF/" class="post-category">
+                                    技术
+                                </a>
+                            
+                            
+                        </span>
+                    </div>
+                </div>
+
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/Hexo/">
+                        <span class="chip bg-color">Hexo</span>
+                    </a>
+                    
+                    <a href="/tags/AI/">
+                        <span class="chip bg-color">AI</span>
+                    </a>
+                    
+                    <a href="/tags/DeepSeek/">
+                        <span class="chip bg-color">DeepSeek</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge right-badge text-color">
+                下一篇&nbsp;<i class="fas fa-chevron-right"></i>
+            </div>
             <div class="card">
                 <a href="/2025/08/17/LeetCode%E5%88%B7%E9%A2%98%E8%AE%B0%E5%BD%95/">
                     <div class="card-image">
@@ -1034,49 +1429,8 @@
                         
                     </div>
                     <div class="publish-info">
-                        <span class="publish-date">
-                            <i class="far fa-clock fa-fw icon-date"></i>2025-08-17
-                        </span>
-                        <span class="publish-author">
-                            
-                            <i class="fas fa-bookmark fa-fw icon-category"></i>
-                            
-                            <a href="/categories/%E6%8A%80%E6%9C%AF/" class="post-category">
-                                    技术
-                                </a>
-                            
-                            
-                        </span>
-                    </div>
-                </div>
-                
-            </div>
-        </div>
-        
-        
-        <div class="article col s12 m6" data-aos="fade-up">
-            <div class="article-badge right-badge text-color">
-                下一篇&nbsp;<i class="fas fa-chevron-right"></i>
-            </div>
-            <div class="card">
-                <a href="/2025/07/11/%E6%96%B0%E7%94%B5%E8%84%91%E8%BF%81%E7%A7%BBhexo/">
-                    <div class="card-image">
-                        
-                        
-                        <img src="/medias/featureimages/46.jpg" class="responsive-img" alt="新电脑迁移hexo">
-                        
-                        <span class="card-title">新电脑迁移hexo</span>
-                    </div>
-                </a>
-                <div class="card-content article-content">
-                    <div class="summary block-with-text">
-                        
-                            换了新电脑，把之前的博客迁移过来，记录一下
-                        
-                    </div>
-                    <div class="publish-info">
                             <span class="publish-date">
-                                <i class="far fa-clock fa-fw icon-date"></i>2025-07-11
+                                <i class="far fa-clock fa-fw icon-date"></i>2025-08-17
                             </span>
                         <span class="publish-author">
                             
@@ -1089,14 +1443,6 @@
                             
                         </span>
                     </div>
-                </div>
-                
-                <div class="card-action article-tags">
-                    
-                    <a href="/tags/hexo/">
-                        <span class="chip bg-color">hexo</span>
-                    </a>
-                    
                 </div>
                 
             </div>

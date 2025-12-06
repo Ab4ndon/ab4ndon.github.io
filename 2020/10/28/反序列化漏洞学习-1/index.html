@@ -450,6 +450,19 @@
         <hr class="clearfix">
         <div class="card-content article-card-content">
             <div id="articleContent">
+                
+    <div class="ai-summary-card" style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 30px; border: 1px solid #e9ecef; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+        <div style="display: flex; align-items: center; margin-bottom: 10px;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 8px;">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z" fill="#3eaf7c"/>
+            </svg>
+            <strong style="color: #3eaf7c; font-size: 1.1em;">AI 摘要</strong>
+        </div>
+        <div style="color: #666; line-height: 1.8; font-size: 0.95rem;">
+            本文介绍了PHP反序列化漏洞的基础知识。序列化是将对象转换为字符串，反序列化则相反。文章详细讲解了serialize()和unserialize()函数，以及相关的魔术方法如__sleep()和__wakeup()，其中__wakeup()在属性个数被修改时可能被绕过。还涉及访问控制修饰符对序列化字符串的影响，以及session处理器的不同导致的序列化差异。最后提到字符串逃逸漏洞，即通过操纵序列化字符串的长度来破坏反序列化过程，并给出了防范建议。
+        </div>
+    </div>
+
                 <p>首先，什么是序列化？</p>
 <p><strong>序列化就是将一个对象转换成字符串。字符串包括，属性名，属性值，属性类型和该对象对应的类名。</strong><br><strong>反序列化则相反将字符串重新恢复成对象</strong></p>
 <table>
@@ -1606,7 +1619,7 @@ xctf Object            //$res2
             <br>
             
             &nbsp;<i class="fas fa-chart-area"></i>&nbsp;站点总字数:&nbsp;<span
-                class="white-color">61.7k</span>&nbsp;字
+                class="white-color">64.8k</span>&nbsp;字
             
             
             

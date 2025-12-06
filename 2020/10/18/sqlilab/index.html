@@ -450,6 +450,19 @@
         <hr class="clearfix">
         <div class="card-content article-card-content">
             <div id="articleContent">
+                
+    <div class="ai-summary-card" style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 30px; border: 1px solid #e9ecef; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+        <div style="display: flex; align-items: center; margin-bottom: 10px;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 8px;">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z" fill="#3eaf7c"/>
+            </svg>
+            <strong style="color: #3eaf7c; font-size: 1.1em;">AI 摘要</strong>
+        </div>
+        <div style="color: #666; line-height: 1.8; font-size: 0.95rem;">
+            本文是一篇SQL注入刷题笔记，主要总结了sqli-labs靶场中Less-3到Less-6关卡的解题思路。文章首先介绍了SQL注入的两种基本类型：数字型注入和字符型注入，并分别说明了其判断方法和利用原理。在实战部分，作者详细记录了如何通过构造特定的payload来获取数据库名、表名、列名以及字段值，并具体演示了concat、concat_ws和group_concat等函数在数据提取中的应用。对于Less-3、4、5、6关卡，作者通过分析报错信息，逐步调整注入语句的闭合方式（如单引号、双引号、括号等）来成功实施注入。
+        </div>
+    </div>
+
                 <h3 id="注入的分类"><a href="#注入的分类" class="headerlink" title="注入的分类"></a>注入的分类</h3><p>注入的分类：数字型和字符型。攻击者目的只有一点，那就是绕过程序的限制，使用户输入的数据带入数据库执行，利用数据库的特殊性获取更多的信息或者更大的权限。</p>
 <h4 id="1、数字型注入"><a href="#1、数字型注入" class="headerlink" title="1、数字型注入"></a>1、数字型注入</h4><p>当输入的参数为整形时，如果存在注入漏洞，可以认为是数字型注入。</p>
 <p>测试步骤：</p>
@@ -1335,7 +1348,7 @@ for i in range(50):
             <br>
             
             &nbsp;<i class="fas fa-chart-area"></i>&nbsp;站点总字数:&nbsp;<span
-                class="white-color">61.7k</span>&nbsp;字
+                class="white-color">64.8k</span>&nbsp;字
             
             
             
