@@ -18,6 +18,9 @@
 
     <title>Ab4nd0n</title>
     <link rel="icon" type="image/jpeg" href="/medias/touxiang.jpg">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://v1.hitokoto.cn" crossorigin>
+    <link rel="preconnect" href="https://sdk.jinrishici.com" crossorigin>
 
     <link rel="stylesheet" type="text/css" href="/libs/awesome/css/all.css">
     <link rel="stylesheet" type="text/css" href="/libs/materialize/materialize.min.css">
@@ -309,15 +312,20 @@
             <div class="description center-align">
                 
                 <span id="subtitle"></span>
-                <script src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11"></script>
+                <script src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11" defer></script>
                 <script>
-                    var typed = new Typed("#subtitle", {
-                        strings: ['从来没有真正的绝境, 只有心灵的迷途','Never really desperate, only the lost of the soul'],
-                        startDelay: 300,
-                        typeSpeed: 100,
-                        loop: true,
-                        backSpeed: 50,
-                        showCursor: true
+                    window.addEventListener('load', function () {
+                        if (!window.Typed) {
+                            return;
+                        }
+                        var typed = new Typed("#subtitle", {
+                            strings: ['从来没有真正的绝境, 只有心灵的迷途','Never really desperate, only the lost of the soul'],
+                            startDelay: 300,
+                            typeSpeed: 100,
+                            loop: true,
+                            backSpeed: 50,
+                            showCursor: true
+                        });
                     });
                 </script>
                 
@@ -474,14 +482,19 @@
                               <p id="poem">挑选中...</p>
                               <p id="info">
                           
-                            <script src="https://sdk.jinrishici.com/v2/browser/jinrishici.js" charset="utf-8"></script>
+                            <script src="https://sdk.jinrishici.com/v2/browser/jinrishici.js" charset="utf-8" defer></script>
                             <script type="text/javascript">
-                              jinrishici.load(function(result) {
-                                poem.innerHTML = result.data.content
-                                info.innerHTML = '【' + result.data.origin.dynasty + '】' + result.data.origin.author + '《' + result.data.origin.title + '》'
-                                document.getElementById("poem").value(poem);
-                                document.getElementById("info").value(info);  
-                            });
+                              window.addEventListener('load', function () {
+                                if (!window.jinrishici) {
+                                  return;
+                                }
+                                jinrishici.load(function(result) {
+                                  poem.innerHTML = result.data.content
+                                  info.innerHTML = '【' + result.data.origin.dynasty + '】' + result.data.origin.author + '《' + result.data.origin.title + '》'
+                                  document.getElementById("poem").value(poem);
+                                  document.getElementById("info").value(info);  
+                                });
+                              });
                             </script>
                           </div>
                           
@@ -511,7 +524,7 @@
                         <div class="card-image">
                             
                             
-                            <img src="/medias/featureimages/10.jpg" class="responsive-img" alt="Google AI Studio部署自己的应用">
+                            <img src="/medias/featureimages/10.jpg" class="responsive-img" alt="Google AI Studio部署自己的应用" loading="lazy" decoding="async">
                             
                             <span class="card-title">Google AI Studio部署自己的应用</span>
                         </div>
@@ -574,7 +587,7 @@
                         <div class="card-image">
                             
                             
-                            <img src="/medias/featureimages/17.jpg" class="responsive-img" alt="给 Hexo 博客添加AI摘要功能">
+                            <img src="/medias/featureimages/17.jpg" class="responsive-img" alt="给 Hexo 博客添加AI摘要功能" loading="lazy" decoding="async">
                             
                             <span class="card-title">给 Hexo 博客添加AI摘要功能</span>
                         </div>
@@ -629,7 +642,7 @@
                         <div class="card-image">
                             
                             
-                            <img src="/medias/featureimages/43.jpg" class="responsive-img" alt="LeetCode刷题记录">
+                            <img src="/medias/featureimages/43.jpg" class="responsive-img" alt="LeetCode刷题记录" loading="lazy" decoding="async">
                             
                             <span class="card-title">LeetCode刷题记录</span>
                         </div>
@@ -668,7 +681,7 @@
                         <div class="card-image">
                             
                             
-                            <img src="/medias/featureimages/29.jpg" class="responsive-img" alt="Vscode_Error">
+                            <img src="/medias/featureimages/29.jpg" class="responsive-img" alt="Vscode_Error" loading="lazy" decoding="async">
                             
                             <span class="card-title">Vscode_Error</span>
                         </div>
@@ -719,7 +732,7 @@
                         <div class="card-image">
                             
                             
-                            <img src="/medias/featureimages/46.jpg" class="responsive-img" alt="新电脑迁移hexo">
+                            <img src="/medias/featureimages/46.jpg" class="responsive-img" alt="新电脑迁移hexo" loading="lazy" decoding="async">
                             
                             <span class="card-title">新电脑迁移hexo</span>
                         </div>
@@ -765,7 +778,7 @@
                     <a href="/2025/06/02/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%AE%9E%E9%AA%8C%E5%90%88%E9%9B%86/">
                         <div class="card-image">
                             
-                            <img src="/medias/featureimages/10.jpg" class="responsive-img" alt="【NJUPT】数据结构实验(合集)">
+                            <img src="/medias/featureimages/10.jpg" class="responsive-img" alt="【NJUPT】数据结构实验(合集)" loading="lazy" decoding="async">
                             
                             <span class="card-title">【NJUPT】数据结构实验(合集)</span>
                         </div>
@@ -824,7 +837,7 @@
                         <div class="card-image">
                             
                             
-                            <img src="/medias/featureimages/8.jpg" class="responsive-img" alt="ROBOCUP RESCUE 示例代码演示">
+                            <img src="/medias/featureimages/8.jpg" class="responsive-img" alt="ROBOCUP RESCUE 示例代码演示" loading="lazy" decoding="async">
                             
                             <span class="card-title">ROBOCUP RESCUE 示例代码演示</span>
                         </div>
@@ -874,7 +887,7 @@
                     <a href="/2021/07/09/%E5%BE%AE%E6%9C%BA%E5%AE%9E%E9%AA%8C/">
                         <div class="card-image">
                             
-                            <img src="/medias/featureimages/14.jpg" class="responsive-img" alt="【NJUPT】微机实验（合集）">
+                            <img src="/medias/featureimages/14.jpg" class="responsive-img" alt="【NJUPT】微机实验（合集）" loading="lazy" decoding="async">
                             
                             <span class="card-title">【NJUPT】微机实验（合集）</span>
                         </div>
@@ -936,7 +949,7 @@
                     <a href="/2021/07/06/%E7%AE%97%E6%B3%95%E5%AE%9E%E9%AA%8C%E5%90%88%E9%9B%86/">
                         <div class="card-image">
                             
-                            <img src="/medias/featureimages/13.jpg" class="responsive-img" alt="【NJUPT】 算法实验（合集）">
+                            <img src="/medias/featureimages/13.jpg" class="responsive-img" alt="【NJUPT】 算法实验（合集）" loading="lazy" decoding="async">
                             
                             <span class="card-title">【NJUPT】 算法实验（合集）</span>
                         </div>
@@ -1091,7 +1104,7 @@
             
             <br>
             
-            <span id="icp"><img src="/medias/icp.png" style="vertical-align: text-bottom;" />
+            <span id="icp"><img src="/medias/icp.png" style="vertical-align: text-bottom;" loading="lazy" decoding="async" />
                 <a href="https://beian.miit.gov.cn/" target="_blank">苏ICP备2020057407号-1</a>
             </span>
             
