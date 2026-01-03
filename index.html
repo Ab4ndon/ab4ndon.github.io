@@ -21,8 +21,6 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="preconnect" href="https://v1.hitokoto.cn" crossorigin>
     <link rel="preconnect" href="https://sdk.jinrishici.com" crossorigin>
-    <link rel="preconnect" href="https://zz.bdstatic.com" crossorigin>
-    <link rel="preconnect" href="https://widget.daovoice.io" crossorigin>
 
     <link rel="stylesheet" type="text/css" href="/libs/awesome/css/all.css">
     <link rel="stylesheet" type="text/css" href="/libs/materialize/materialize.min.css">
@@ -316,7 +314,7 @@
                 <span id="subtitle"></span>
                 <script src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11" defer></script>
                 <script>
-                    window.addEventListener('DOMContentLoaded', function () {
+                    window.addEventListener('load', function () {
                         if (!window.Typed) {
                             return;
                         }
@@ -480,7 +478,7 @@
                           
                             <script src="https://sdk.jinrishici.com/v2/browser/jinrishici.js" charset="utf-8" defer></script>
                             <script type="text/javascript">
-                              window.addEventListener('DOMContentLoaded', function () {
+                              window.addEventListener('load', function () {
                                 if (!window.jinrishici) {
                                   return;
                                 }
