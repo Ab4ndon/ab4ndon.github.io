@@ -33,7 +33,7 @@
 
     <script src="https://v1.hitokoto.cn/?c=d&encode=js&select=%23hitokoto" defer></script>
 
-<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="Ab4nd0n" type="application/atom+xml"><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+<meta name="generator" content="Hexo 5.4.0"><!-- hexo-inject:begin --><!-- hexo-inject:end --><link rel="alternate" href="/atom.xml" title="Ab4nd0n" type="application/atom+xml">
 </head>
 
 
@@ -417,7 +417,7 @@
                 
                 <div class="post-date info-break-policy">
                     <i class="far fa-calendar-check fa-fw"></i>更新日期:&nbsp;&nbsp;
-                    2023-08-06
+                    2026-01-05
                 </div>
                 
 
@@ -446,6 +446,32 @@
         <hr class="clearfix">
         <div class="card-content article-card-content">
             <div id="articleContent">
+                
+    <style>
+        .ai-summary-card {
+            background: #f6f8fa;
+            border-left: 4px solid #3eaf7c;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-size: 15px;
+            color: #555;
+            line-height: 1.6;
+        }
+        .ai-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+    </style>
+
+    <div class="ai-summary-card">
+        <div class="ai-title">🤖 AI 摘要</div>
+        <div>作者首次参加CTF比赛，在解题过程中遇到了《Ezfileinclude》挑战。通过分析URL参数，发现f参数为base64编码，t参数为Unix时间戳。在尝试目录穿越读取根目录flag时，需要同时传递当前时间戳和编码后的路径。最终通过手动调整时间戳和正确编码payload，成功获取flag。作者反思需学习Python脚本以自动化处理时间戳，并强调多刷题积累经验的重要性。</div>
+    </div>
+
                 <p>今天第一次参加CTF比赛，对于我这个菜鸡来说，简直毫无比赛体验<span class="github-emoji" style="color: transparent;background:no-repeat url(https://github.githubassets.com/images/icons/emoji/unicode/1f622.png?v8) center/contain" data-src="https://github.githubassets.com/images/icons/emoji/unicode/1f622.png?v8">😢</span><span class="github-emoji" style="color: transparent;background:no-repeat url(https://github.githubassets.com/images/icons/emoji/unicode/1f622.png?v8) center/contain" data-src="https://github.githubassets.com/images/icons/emoji/unicode/1f622.png?v8">😢</span>，遭受了五个小时的吊打。</p>
 <p><img src="/2020/07/25/DASCTF/image-20200725170156404.png" alt="image-20200725170156404"></p>
 <p>没错，就是这么残忍。直接把我0封了。<img src="/2020/07/25/DASCTF/image-20200725180746269.png" alt="image-20200725180746269"></p>

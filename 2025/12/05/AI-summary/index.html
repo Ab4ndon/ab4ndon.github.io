@@ -33,7 +33,7 @@
 
     <script src="https://v1.hitokoto.cn/?c=d&encode=js&select=%23hitokoto" defer></script>
 
-<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="Ab4nd0n" type="application/atom+xml"><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+<meta name="generator" content="Hexo 5.4.0"><!-- hexo-inject:begin --><!-- hexo-inject:end --><link rel="alternate" href="/atom.xml" title="Ab4nd0n" type="application/atom+xml">
 </head>
 
 
@@ -462,6 +462,32 @@
         <hr class="clearfix">
         <div class="card-content article-card-content">
             <div id="articleContent">
+                
+    <style>
+        .ai-summary-card {
+            background: #f6f8fa;
+            border-left: 4px solid #3eaf7c;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-size: 15px;
+            color: #555;
+            line-height: 1.6;
+        }
+        .ai-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+    </style>
+
+    <div class="ai-summary-card">
+        <div class="ai-title">🤖 AI 摘要</div>
+        <div>本文介绍了如何为Hexo博客添加AI摘要功能。作者通过调用DeepSeek API，经历了从基础版本到最终通用版本的迭代过程。初期版本存在API密钥泄露、长文章摘要不准确等问题，后续通过环境变量配置、YAML格式修复、提取文章大纲以及支持增量/全量更新等方式，逐步优化了脚本的安全性和实用性。最终实现了一个自动化工具，能够智能生成摘要并适配各类文章，提升了博客的阅读体验。</div>
+    </div>
+
                 <p>最近浏览技术博客时，发现像CSDN都会有 **AI 摘要 ** 功能，觉得还算是一个实用的功能，所以作为一个热衷于折腾 Hexo 的博主，我也决定动手给自己的博客加上这个功能。</p>
 <p>本以为写个脚本调用一下 API 是件很简单的事，结果实际操作中踩了不少坑：<strong>API Key 泄露风险、YAML 格式解析报错、长文章摘要不准确…</strong></p>
 <p>这篇文章将详细复盘我从“原始版本”到“终极通用版本”的开发全过程，并附上完整的代码和配置教程。</p>

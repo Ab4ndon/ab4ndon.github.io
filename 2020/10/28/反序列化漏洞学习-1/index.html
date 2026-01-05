@@ -33,7 +33,7 @@
 
     <script src="https://v1.hitokoto.cn/?c=d&encode=js&select=%23hitokoto" defer></script>
 
-<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="Ab4nd0n" type="application/atom+xml"><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+<meta name="generator" content="Hexo 5.4.0"><!-- hexo-inject:begin --><!-- hexo-inject:end --><link rel="alternate" href="/atom.xml" title="Ab4nd0n" type="application/atom+xml">
 </head>
 
 
@@ -450,6 +450,32 @@
         <hr class="clearfix">
         <div class="card-content article-card-content">
             <div id="articleContent">
+                
+    <style>
+        .ai-summary-card {
+            background: #f6f8fa;
+            border-left: 4px solid #3eaf7c;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-size: 15px;
+            color: #555;
+            line-height: 1.6;
+        }
+        .ai-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+    </style>
+
+    <div class="ai-summary-card">
+        <div class="ai-title">🤖 AI 摘要</div>
+        <div>本文介绍了PHP反序列化漏洞的基本原理和利用方式。序列化是将对象转换为字符串，反序列化则相反。文章重点讲解了serialize()和unserialize()函数，以及相关的魔术方法如__sleep()和__wakeup()，后者在属性个数被篡改时可能被绕过。此外，还涉及访问控制修饰符对序列化字符串的影响、session处理器的差异以及字符串逃逸漏洞。最后总结了反序列化漏洞的触发条件和防范措施，强调要严格控制输入参数。</div>
+    </div>
+
                 <p>首先，什么是序列化？</p>
 <p><strong>序列化就是将一个对象转换成字符串。字符串包括，属性名，属性值，属性类型和该对象对应的类名。</strong><br><strong>反序列化则相反将字符串重新恢复成对象</strong></p>
 <table>

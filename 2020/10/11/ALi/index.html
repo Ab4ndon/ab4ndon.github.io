@@ -33,7 +33,7 @@
 
     <script src="https://v1.hitokoto.cn/?c=d&encode=js&select=%23hitokoto" defer></script>
 
-<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="Ab4nd0n" type="application/atom+xml"><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+<meta name="generator" content="Hexo 5.4.0"><!-- hexo-inject:begin --><!-- hexo-inject:end --><link rel="alternate" href="/atom.xml" title="Ab4nd0n" type="application/atom+xml">
 </head>
 
 
@@ -417,7 +417,7 @@
                 
                 <div class="post-date info-break-policy">
                     <i class="far fa-calendar-check fa-fw"></i>更新日期:&nbsp;&nbsp;
-                    2023-08-06
+                    2026-01-05
                 </div>
                 
 
@@ -446,6 +446,32 @@
         <hr class="clearfix">
         <div class="card-content article-card-content">
             <div id="articleContent">
+                
+    <style>
+        .ai-summary-card {
+            background: #f6f8fa;
+            border-left: 4px solid #3eaf7c;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-size: 15px;
+            color: #555;
+            line-height: 1.6;
+        }
+        .ai-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+    </style>
+
+    <div class="ai-summary-card">
+        <div class="ai-title">🤖 AI 摘要</div>
+        <div>本文分享了作者在阿里云CDN加速域名解析过程中遇到的冲突问题及解决方法。作者发现添加CNAME记录时与原有的A解析冲突，尝试删除A解析后导致博客502错误。通过联系客服得知，问题在于CDN源站IP设置错误，应改为A解析中的IP地址。正确操作是：先修正源站IP，再删除A解析并添加CNAME记录，即可成功完成加速配置。</div>
+    </div>
+
                 <p>自己的个人博客搭建了也有一段时间了，以前部署在Gitee上访问速度还行，后来部署到GitHub后速度是一天不如一天了，于是想看看能不能加速一下，看了看网上的做法，我选择采用CDN加速域名。</p>
 <p>首先，你需要将域名进行备案，备案完成后才能进行后续操作。</p>
 <p>然后我选择的是阿里云的CDN（腾讯云貌似有6个月的免费试用，但是由于我是阿里云的域名，去腾讯云搞又得在那边域名备案，就放弃了）</p>

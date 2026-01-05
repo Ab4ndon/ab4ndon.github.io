@@ -33,7 +33,7 @@
 
     <script src="https://v1.hitokoto.cn/?c=d&encode=js&select=%23hitokoto" defer></script>
 
-<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="Ab4nd0n" type="application/atom+xml"><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+<meta name="generator" content="Hexo 5.4.0"><!-- hexo-inject:begin --><!-- hexo-inject:end --><link rel="alternate" href="/atom.xml" title="Ab4nd0n" type="application/atom+xml">
 </head>
 
 
@@ -421,7 +421,7 @@
                 
                 <div class="post-date info-break-policy">
                     <i class="far fa-calendar-check fa-fw"></i>更新日期:&nbsp;&nbsp;
-                    2023-08-06
+                    2026-01-05
                 </div>
                 
 
@@ -450,6 +450,32 @@
         <hr class="clearfix">
         <div class="card-content article-card-content">
             <div id="articleContent">
+                
+    <style>
+        .ai-summary-card {
+            background: #f6f8fa;
+            border-left: 4px solid #3eaf7c;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-size: 15px;
+            color: #555;
+            line-height: 1.6;
+        }
+        .ai-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+    </style>
+
+    <div class="ai-summary-card">
+        <div class="ai-title">🤖 AI 摘要</div>
+        <div>本文记录了作者在部署Hexo博客时遇到的`hexo d`命令报错问题，具体表现为连接GitHub超时。作者尝试了多种方法，包括重新部署博客到GitHub、调整Git配置以及取消HTTP代理并设置环境变量`GIT_SSL_NO_VERIFY`为`true`，最终解决了部署失败的问题。文章提供了相关参考链接，但强调解决方案可能因人而异。</div>
+    </div>
+
                 <p>hexo 博客在hexo d 部署时报错</p>
 <p>问题描述：</p>
 <p>博客闲置了一段时间，最近想在上面记录一些自己遇到的问题和学习上的一些东西，<code>hexo s</code>正常，但是<code>hexo g</code>后进行<code>hexo d</code>时报错：</p>

@@ -33,7 +33,7 @@
 
     <script src="https://v1.hitokoto.cn/?c=d&encode=js&select=%23hitokoto" defer></script>
 
-<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="Ab4nd0n" type="application/atom+xml"><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+<meta name="generator" content="Hexo 5.4.0"><!-- hexo-inject:begin --><!-- hexo-inject:end --><link rel="alternate" href="/atom.xml" title="Ab4nd0n" type="application/atom+xml">
 </head>
 
 
@@ -454,6 +454,32 @@
         <hr class="clearfix">
         <div class="card-content article-card-content">
             <div id="articleContent">
+                
+    <style>
+        .ai-summary-card {
+            background: #f6f8fa;
+            border-left: 4px solid #3eaf7c;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-size: 15px;
+            color: #555;
+            line-height: 1.6;
+        }
+        .ai-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+    </style>
+
+    <div class="ai-summary-card">
+        <div class="ai-title">🤖 AI 摘要</div>
+        <div>本文介绍了将Google AI Studio生成的应用部署到网站的方法。对于无AI功能的纯前端应用，可直接通过GitHub一键部署到Vercel、Netlify或EdgeOne等平台。对于需要调用Gemini API的应用，有两种方案：一是使用谷歌云部署，自动保护API Key；二是改造为Next.js全栈应用，将API Key存放在后端，实现更通用的模型支持。文章还详细分享了从开发到部署的完整流程，包括使用Cursor修改代码、Git管理以及通过EdgeOne绑定自定义域名和配置SSL证书的具体步骤。</div>
+    </div>
+
                 <h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><blockquote>
 <p>最近刷到很多用Google AI Studio生成各种好玩的应用的视频，不过这些应用都是依托于AI Studio上运行的，使用起来很不方便，所以就在想能不能将AI Studio生成的应用部署到网站上，更加方便的进行访问。本文主要介绍一下相关的部署方式和自己用的比较舒服的一套开发和部署流程。</p>
 </blockquote>

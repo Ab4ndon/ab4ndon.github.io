@@ -33,7 +33,7 @@
 
     <script src="https://v1.hitokoto.cn/?c=d&encode=js&select=%23hitokoto" defer></script>
 
-<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="Ab4nd0n" type="application/atom+xml"><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+<meta name="generator" content="Hexo 5.4.0"><!-- hexo-inject:begin --><!-- hexo-inject:end --><link rel="alternate" href="/atom.xml" title="Ab4nd0n" type="application/atom+xml">
 </head>
 
 
@@ -450,6 +450,32 @@
         <hr class="clearfix">
         <div class="card-content article-card-content">
             <div id="articleContent">
+                
+    <style>
+        .ai-summary-card {
+            background: #f6f8fa;
+            border-left: 4px solid #3eaf7c;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-size: 15px;
+            color: #555;
+            line-height: 1.6;
+        }
+        .ai-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+    </style>
+
+    <div class="ai-summary-card">
+        <div class="ai-title">🤖 AI 摘要</div>
+        <div>本文是一篇SQL注入刷题笔记，主要记录了在sqli-labs靶场中的解题过程。文章首先介绍了SQL注入的两种基本类型：数字型注入和字符型注入，并分别说明了其判断方法和利用原理。随后，作者以less-3、less-4、less-5、less-6关卡为例，详细展示了如何通过闭合引号和括号、使用联合查询、利用information_schema数据库等方法，逐步获取当前数据库名、表名、列名以及字段值。核心是利用SQL语句的构造与数据库特性来绕过限制，获取敏感信息。</div>
+    </div>
+
                 <h3 id="注入的分类"><a href="#注入的分类" class="headerlink" title="注入的分类"></a>注入的分类</h3><p>注入的分类：数字型和字符型。攻击者目的只有一点，那就是绕过程序的限制，使用户输入的数据带入数据库执行，利用数据库的特殊性获取更多的信息或者更大的权限。</p>
 <h4 id="1、数字型注入"><a href="#1、数字型注入" class="headerlink" title="1、数字型注入"></a>1、数字型注入</h4><p>当输入的参数为整形时，如果存在注入漏洞，可以认为是数字型注入。</p>
 <p>测试步骤：</p>
