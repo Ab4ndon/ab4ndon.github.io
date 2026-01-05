@@ -5984,4 +5984,4361 @@ int main()
         <tag>内排序</tag>
       </tags>
   </entry>
+  <entry>
+    <title>hexo 添加AI摘要功能</title>
+    <url>/2025/12/05/AI-summary/</url>
+    <content><![CDATA[<p>最近浏览技术博客时，发现像CSDN都会有 **AI 摘要 ** 功能，觉得还算是一个实用的功能，所以作为一个热衷于折腾 Hexo 的博主，我也决定动手给自己的博客加上这个功能。</p>
+<p>本以为写个脚本调用一下 API 是件很简单的事，结果实际操作中踩了不少坑：<strong>API Key 泄露风险、YAML 格式解析报错、长文章摘要不准确…</strong></p>
+<p>这篇文章将详细复盘我从“原始版本”到“终极通用版本”的开发全过程，并附上完整的代码和配置教程。</p>
+<h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><p>在开始写代码之前，我们需要准备好环境和工具。</p>
+<h3 id="1-申请-API"><a href="#1-申请-API" class="headerlink" title="1. 申请 API"></a>1. 申请 API</h3><p>考虑到成本和中文理解能力，我选择了 **DeepSeek (深度求索)**。它的 API 完全兼容 OpenAI 格式，价格极低（写这篇博客时大约是 GPT-4 的百分之一），且拥有 64K 的超大上下文窗口，非常适合用来读长篇博客。</p>
+<ul>
+<li>去 <a href="https://platform.deepseek.com/">DeepSeek 开放平台</a> 申请 API Key。</li>
+</ul>
+<h3 id="2-安装依赖"><a href="#2-安装依赖" class="headerlink" title="2. 安装依赖"></a>2. 安装依赖</h3><p>我们需要在 Hexo 根目录下安装几个 Node.js 库：</p>
+<pre><code class="line-numbers language-bash"># 1. OpenAI SDK (用于调用大模型)
+# 2. dotenv (用于安全读取环境变量)
+# 3. gray-matter (用于解析和生成 Markdown 的 Front-matter)
+npm install openai dotenv gray-matter
+</code></pre>
+<h2 id="具体实现"><a href="#具体实现" class="headerlink" title="具体实现"></a>具体实现</h2><h3 id="1-创建自动化脚本"><a href="#1-创建自动化脚本" class="headerlink" title="1.创建自动化脚本"></a>1.创建自动化脚本</h3><p>在博客根目录的 <code>scripts</code> 文件夹下（如果没有就新建一个 <code>scripts</code> 文件夹），新建一个文件 <code>ai_summary.js</code>。</p>
+<p>复制以下代码进去：</p>
+<pre><code class="line-numbers language-javascript">/**
+ * Hexo AI Summary Generator
+ * 使用方法: hexo ai
+ */
+const { OpenAI } = require("openai");
+const fs = require("fs");
+const path = require("path");
+const matter = require("gray-matter"); // Hexo 自带了 gray-matter，无需额外安装
+
+// ================= 配置区域 =================
+const API_KEY = "sk-xxxxxxxxxxxxxxxxxxxxxxxx"; // 🔴 替换成你的 API Key
+const API_BASE_URL = "https://api.deepseek.com"; // 如果用 OpenAI 则不用改，用 DeepSeek 请填这个
+const MODEL_NAME = "deepseek-chat"; // 模型名称
+// ===========================================
+
+const client = new OpenAI({
+  apiKey: API_KEY,
+  baseURL: API_BASE_URL,
+});
+
+hexo.extend.console.register("ai", "自动生成 AI 摘要", async function (args) {
+  const posts = hexo.locals.get("posts").data;
+  const log = hexo.log;
+
+  log.info("🤖 正在启动 AI 摘要生成助手...");
+
+  for (let i = 0; i &lt; posts.length; i++) {
+    const post = posts[i];
+    const fullPath = post.full_source;
+
+    // 1. 读取文件内容
+    const fileContent = fs.readFileSync(fullPath, "utf8");
+    const parsed = matter(fileContent);
+
+    // 2. 检查是否已经存在 ai_summary
+    if (parsed.data.ai_summary) {
+      // log.info(`[跳过] 已存在摘要: ${post.title}`);
+      continue;
+    }
+
+    log.info(`[处理中] 正在为文章生成摘要: ${post.title}`);
+
+    // 3. 提取纯文本用于发送给 AI (去掉 Markdown 符号，截取前 1000 字以节省 Token)
+    const cleanContent = post.content.replace(/&lt;[^&gt;]+&gt;/g, "").slice(0, 1000);
+
+    try {
+      // 4. 调用 API
+      const completion = await client.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: "你是一个博客摘要助手。请用一段通俗易懂的中文总结以下文章的核心内容，字数控制在 80-120 字之间，不要使用markdown格式，不要有多余的废话。",
+          },
+          { role: "user", content: cleanContent },
+        ],
+        model: MODEL_NAME,
+      });
+
+      const summary = completion.choices[0].message.content.trim();
+
+      // 5. 将摘要写入 Front-matter
+      // 我们使用字符串替换的方式，避免重组导致格式混乱
+      const newContent = fileContent.replace(
+        /^---\n([\s\S]+?)\n---/,
+        `---\n$1\nai_summary: ${summary}\n---`
+      );
+
+      fs.writeFileSync(fullPath, newContent, "utf8");
+      log.info(`✅ [成功] 摘要已写入: ${post.title}`);
+
+    } catch (error) {
+      log.error(`❌ [失败] ${post.title}: ${error.message}`);
+    }
+  }
+
+  log.info("🎉 所有文章处理完毕！请检查 md 文件。");
+});
+</code></pre>
+<h3 id="2-运行生成"><a href="#2-运行生成" class="headerlink" title="2.运行生成"></a>2.运行生成</h3><p>在终端运行：</p>
+<pre><code class="line-numbers language-bash">hexo ai
+</code></pre>
+<p>会看到脚本开始逐个处理没有摘要的文章，并自动修改 <code>source/_posts/</code> 下的 <code>.md</code> 文件，在头部增加 <code>ai_summary: 你的摘要内容</code>。</p>
+<h3 id="3-展示在页面上"><a href="#3-展示在页面上" class="headerlink" title="3.展示在页面上"></a>3.展示在页面上</h3><p>你需要修改你的 <strong>主题文件</strong> 来把这个摘要显示出来。 找到你的主题文件夹下的文章模板，通常在 <code>themes/你的主题/layout/_partial/post/</code> 目录下，文件名可能是 <code>intro.ejs</code> 或 <code>article.ejs</code>。</p>
+<p>以 <strong>Hexo-Matery</strong> 或常见主题为例，通常修改 <code>themes/主题名/layout/_partial/post-detail.ejs</code> 文件。</p>
+<p>在 <code>&lt;%- page.content %&gt;</code> 之前插入以下代码：</p>
+<pre><code class="line-numbers language-html">&lt;% if (page.ai_summary) { %&gt;
+    &lt;style&gt;
+        .ai-summary-card {
+            background: #f6f8fa;
+            border-left: 4px solid #3eaf7c;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-size: 15px;
+            color: #555;
+            line-height: 1.6;
+        }
+        .ai-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+    &lt;/style&gt;
+
+    &lt;div class="ai-summary-card"&gt;
+        &lt;div class="ai-title"&gt;🤖 AI 摘要&lt;/div&gt;
+        &lt;div&gt;&lt;%= page.ai_summary %&gt;&lt;/div&gt;
+    &lt;/div&gt;
+&lt;% } %&gt;
+</code></pre>
+<h3 id="完成！"><a href="#完成！" class="headerlink" title="完成！"></a>完成！</h3><p>以后写完新文章：</p>
+<ol>
+<li><code>hexo ai</code> (生成摘要)</li>
+<li><code>hexo s</code> (本地预览)</li>
+<li><code>hexo g -d</code> (部署上线)</li>
+</ol>
+<h2 id="改进"><a href="#改进" class="headerlink" title="改进"></a>改进</h2><h3 id="V1-0：原始版本"><a href="#V1-0：原始版本" class="headerlink" title="V1.0：原始版本"></a>V1.0：原始版本</h3><p>最初的想法很简单：读取文件 -&gt; 调用 API -&gt; 把摘要替换进文件头。</p>
+<p><strong>原始代码片段：</strong></p>
+<pre><code class="line-numbers language-javascript">// scripts/ai_summary.js (V1)
+const API_KEY = "sk-xxxxxxxx"; // &lt;--- 致命错误：直接硬编码 Key
+// ...
+const cleanContent = post.content.replace(/&lt;[^&gt;]+&gt;/g, "").slice(0, 1000); // &lt;--- 问题：只截取了前1000字
+// ...
+// 简单的正则替换
+const newContent = fileContent.replace(/^---\n([\s\S]+?)\n---/, `---\n$1\nai_summary: ${summary}\n---`);
+</code></pre>
+<p><strong>问题：</strong></p>
+<ol>
+<li><strong>安全隐患</strong>：如果我把这个文件 push 到 GitHub，API Key 就直接泄露了。</li>
+<li><strong>内容截断</strong>：<code>slice(0, 1000)</code> 导致对于长篇技术文章，AI 只能读到前言，生成的摘要完全抓不住重点。</li>
+<li><strong>格式脆弱</strong>：简单的正则替换容易破坏原本复杂的 Front-matter 结构。</li>
+</ol>
+<h3 id="V2-0：安全性与稳定性的修复"><a href="#V2-0：安全性与稳定性的修复" class="headerlink" title="V2.0：安全性与稳定性的修复"></a>V2.0：安全性与稳定性的修复</h3><p>针对 V1 的问题，我进行了第一次重构。</p>
+<h4 id="1-解决-Key-泄露-配置环境变量"><a href="#1-解决-Key-泄露-配置环境变量" class="headerlink" title="1. 解决 Key 泄露 (配置环境变量)"></a>1. 解决 Key 泄露 (配置环境变量)</h4><p>在博客根目录新建 <code>.env</code> 文件：</p>
+<pre><code class="line-numbers language-bash">AI_API_KEY=sk-your-actual-api-key-here
+</code></pre>
+<p><strong>⚠️ 极其重要：</strong> 修改 <code>.gitignore</code> 文件，添加一行：</p>
+<pre><code class="line-numbers language-bash">.env
+</code></pre>
+<p>这样 Git 就会忽略这个文件，确保 Key 永远保存在本地。</p>
+<h4 id="2-解决-YAML-解析崩溃"><a href="#2-解决-YAML-解析崩溃" class="headerlink" title="2. 解决 YAML 解析崩溃"></a>2. 解决 YAML 解析崩溃</h4><p>在运行脚本时，我遇到了 <code>YAMLException: can not read a block mapping entry</code> 报错。原因是部分老文章的 Front-matter 里使用了 <strong>Tab 键</strong> 缩进，而标准的 YAML 只允许空格。</p>
+<p>✅ 解决方案：</p>
+<p>使用 gray-matter 库的 stringify 方法。它不仅能解析，还能把对象重新组装成标准的 YAML 格式字符串，自动修复缩进问题。</p>
+<h3 id="V3-0：上下文扩容与大纲提取"><a href="#V3-0：上下文扩容与大纲提取" class="headerlink" title="V3.0：上下文扩容与大纲提取"></a>V3.0：上下文扩容与大纲提取</h3><p>在查看AI生成的摘要时，我发现 AI 的总结很局限，基本只是根据文章的前一小部分文字进行总结，而不是完整的文章，导致总结出来的内容很局限；另外，像LeetCode刷题记录那篇文章，因为题目数量众多，上下文很长，所以很难将完整的文章喂给大模型。</p>
+<p><strong>✅ 优化策略：</strong></p>
+<ol>
+<li><strong>扩大窗口</strong>：DeepSeek 支持 64K Context，我将截取限制从 1k 提升到 <strong>50k</strong> 字符。</li>
+<li><strong>提取大纲</strong>：用正则抓取所有的 <code>## 标题</code>， 利用正则 <code>match(/^#{1,4} .+/gm)</code> 提取文章的层级目录（Outline），在 Prompt 中先告诉 AI 这篇文章的结构。</li>
+<li><strong>过滤代码</strong>：刷题文章代码量巨大且消耗 Token，使用 <code>replace</code> 将代码块 ```…``` 替换为占位符 <code>[代码块]</code>，让 AI 专注阅读解题思路。</li>
+</ol>
+<h3 id="V4-0：增量更新与全量更新"><a href="#V4-0：增量更新与全量更新" class="headerlink" title="V4.0：增量更新与全量更新"></a>V4.0：增量更新与全量更新</h3><p><strong>增量更新</strong>指的是当我们新写了一篇文章的时候只需要生成这一篇文章的摘要，而不需要将之前生成过的文章摘要再重新生成一遍，这个功能主要是通过检查是否已经存在<code>ai_summary</code>去实现。</p>
+<pre><code>    // 2. 检查是否已经存在 ai_summary
+    if (parsed.data.ai_summary) {
+      // log.warn(`⚠️ [跳过] ...`); 
+      continue; // &lt;--- 关键在这里！
+    }
+</code></pre>
+<p>这段代码的意思是：</p>
+<ol>
+<li>脚本启动后，会扫描所有文章。在处理每一篇文章前，它会先检查 Markdown 文件的头部（Front-matter）里有没有 <code>ai_summary</code> 这个字段。</li>
+<li><strong>如果已经有了：</strong> 直接执行 <code>continue</code>，<strong>跳过</strong>当前循环，不调用 API，不扣费，直接看下一篇。</li>
+<li><strong>如果没有（比如你刚写的新文章）：</strong> 才会继续往下走，调用 DeepSeek API 生成摘要并写入。</li>
+</ol>
+<p>但是在一些场景下还是需要全量更新，例如生成效果不好希望重新生成，所以我又加了一个全量更新的功能。</p>
+<p><strong>支持 <code>-f</code> 参数</strong>：如果不加 <code>-f</code>，它就是增量更新（省钱）；加了 <code>-f</code>，它会无视是否存在摘要，强制把所有文章重新“读”一遍并生成新的摘要。</p>
+<h2 id="终版"><a href="#终版" class="headerlink" title="终版"></a>终版</h2><p>结合了以上所有经验，这是最终的脚本。把它保存为 <code>scripts/ai_summary.js</code>。</p>
+<p><strong>功能亮点：</strong></p>
+<ul>
+<li><ol>
+<li>支持增量更新 (默认) 和 全量强制更新 (hexo ai -f)</li>
+</ol>
+</li>
+<li><ol start="2">
+<li>智能大纲：自动提取 Markdown 标题，辅助 AI 理解文章结构</li>
+</ol>
+</li>
+<li><ol start="3">
+<li>超大上下文：支持 5万字符的长文读取</li>
+</ol>
+</li>
+<li><ol start="4">
+<li>通用化：既适合 LeetCode 刷题集，也适合普通技术/生活文章</li>
+</ol>
+</li>
+<li><ol start="5">
+<li>格式修复：自动标准化 YAML 头部的缩进问题</li>
+</ol>
+</li>
+</ul>
+<pre><code class="line-numbers language-javascript">/**
+ * Hexo AI Summary Generator (Universal Pro)
+ * * 功能亮点：
+ * 1. 支持增量更新 (默认) 和 全量强制更新 (hexo ai -f)
+ * 2. 智能大纲：自动提取 Markdown 标题，辅助 AI 理解文章结构
+ * 3. 超大上下文：支持 5万字符的长文读取
+ * 4. 通用化：既适合 LeetCode 刷题集，也适合普通技术/生活文章
+ * 5. 格式修复：自动标准化 YAML 头部的缩进问题
+ */
+const { OpenAI } = require("openai");
+const fs = require("fs");
+const path = require("path");
+const matter = require("gray-matter");
+
+require('dotenv').config();
+
+// ================= 配置区域 =================
+const API_KEY = process.env.AI_API_KEY; 
+const API_BASE_URL = "https://api.deepseek.com"; 
+const MODEL_NAME = "deepseek-chat"; 
+// ===========================================
+
+if (!API_KEY) {
+    console.error("❌ 错误: 未找到 API Key。请在根目录 .env 文件中配置 AI_API_KEY。");
+    process.exit(1);
+}
+
+const client = new OpenAI({
+  apiKey: API_KEY,
+  baseURL: API_BASE_URL,
+});
+
+hexo.extend.console.register("ai", "自动生成 AI 摘要", {
+  options: [
+    { name: '-f, --force', desc: 'Force regenerate all summaries' } // 👈 全量更新开关在这里
+  ]
+}, async function (args) {
+  const log = this.log;
+  // 获取命令行参数，判断是否开启强制模式
+  const isForceMode = args.f || args.force;
+
+  log.info("📚 正在加载文章数据...");
+  await this.load();
+
+  const posts = this.locals.get("posts").toArray();
+  
+  if (posts.length === 0) {
+    log.warn("⚠️  没有找到任何文章。");
+    return;
+  }
+
+  log.info(`🤖 AI 摘要助手启动 | 模式: ${isForceMode ? '🔥 强制全量更新 (覆盖旧摘要)' : '⚡ 增量更新 (跳过已生成)'}`);
+
+  let count = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  for (const post of posts) {
+    const fullPath = post.full_source;
+    let fileContent, parsed;
+
+    try {
+        fileContent = fs.readFileSync(fullPath, "utf8");
+        parsed = matter(fileContent);
+    } catch (e) {
+        log.warn(`⚠️ [解析失败] 跳过: ${post.title}`);
+        failed++;
+        continue;
+    }
+
+    // === 逻辑判断 ===
+    // 只有在 "非强制模式" 且 "摘要已存在" 时才跳过
+    if (!isForceMode &amp;&amp; parsed.data.ai_summary) {
+      skipped++;
+      continue;
+    }
+
+    log.info(`[分析中] ${post.title}...`);
+
+    // === 1. 提取大纲 (标题) ===
+    const headings = parsed.content.match(/^#{1,4} .+/gm) || [];
+    const outline = headings.length &gt; 0 ? headings.join("\n") : "（无显式标题结构）";
+
+    // === 2. 内容清洗 ===
+    let processingContent = parsed.content;
+    // 替换代码块为占位符，减少 Token 消耗，让 AI 专注逻辑
+    processingContent = processingContent.replace(/```[\s\S]*?```/g, "\n[此处为代码块]\n");
+    // 去除 HTML
+    processingContent = processingContent.replace(/&lt;[^&gt;]+&gt;/g, "");
+    // 压缩空行
+    processingContent = processingContent.replace(/[\r\n]+/g, "\n").trim();
+    
+    const cleanContent = processingContent.slice(0, 50000);
+
+    // === 3. 组合 Prompt (通用版) ===
+    const finalUserContent = `
+文章标题: ${post.title}
+
+文章大纲结构:
+${outline}
+
+文章正文内容:
+${cleanContent}
+    `.trim();
+
+    try {
+      const completion = await client.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: "你是一个专业的博客摘要助手。请根据提供的【文章大纲】和【正文内容】，生成一段通俗流畅的中文摘要。\n\n要求：\n1. 如果文章是技术/刷题类，请概括核心算法或解决的问题。\n2. 如果文章是感悟/杂谈类，请总结作者的核心观点。\n3. 字数控制在 80-150 字。\n4. 直接输出纯文本，不要使用Markdown格式，不要包含代码。",
+          },
+          { role: "user", content: finalUserContent },
+        ],
+        model: MODEL_NAME,
+      });
+
+      const summary = completion.choices[0].message.content.trim();
+
+      // === 4. 回写文件 ===
+      parsed.data.ai_summary = summary;
+      const newFileContent = matter.stringify(parsed.content, parsed.data);
+      fs.writeFileSync(fullPath, newFileContent, "utf8");
+      
+      log.info(`✅ [已更新] ${post.title}`);
+      count++;
+
+    } catch (error) {
+      log.error(`❌ [API 错误] ${post.title}: ${error.message}`);
+      failed++;
+    }
+  }
+
+  log.info(`🎉 任务结束! 更新: ${count} | 跳过: ${skipped} | 失败: ${failed}`);
+});
+</code></pre>
+<hr>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>现在，我的博客工作流变得非常酷炫：</p>
+<ol>
+<li><strong>写完新文章</strong>：在终端运行 <code>hexo ai</code>，脚本会自动检测新文章，几秒钟生成摘要。</li>
+<li><strong>想要刷新旧文章</strong>：运行 <code>hexo ai -f</code>，全量重新生成。</li>
+<li><strong>部署</strong>：<code>hexo g -d</code>。</li>
+</ol>
+<p>这个折腾过程虽然曲折，但最终不仅实现了一个实用的功能，还顺手把博客里历史遗留的 YAML 格式问题全修好了。如果你也是 Hexo 用户，强烈推荐尝试！</p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>技术</category>
+      </categories>
+      <tags>
+        <tag>Hexo</tag>
+        <tag>AI</tag>
+        <tag>DeepSeek</tag>
+        <tag>Node.js</tag>
+        <tag>教程</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>LeetCode刷题记录</title>
+    <url>/2025/08/07/LeetCode%E5%88%B7%E9%A2%98%E8%AE%B0%E5%BD%95/</url>
+    <content><![CDATA[<p><a href="https://leetcode.cn/discuss/post/3141566/ru-he-ke-xue-shua-ti-by-endlesscheng-q3yd/">分享｜如何科学刷题？- 讨论 - 力扣（LeetCode）</a></p>
+<h2 id="链表"><a href="#链表" class="headerlink" title="链表"></a>链表</h2><h3 id="21《合并两个有序链表》"><a href="#21《合并两个有序链表》" class="headerlink" title="21《合并两个有序链表》"></a>21《合并两个有序链表》</h3><h4 id="思路"><a href="#思路" class="headerlink" title="思路"></a>思路</h4><ul>
+<li>建一个哑结点 dummy，方便统一处理首节点。  </li>
+<li>用 cur 指向当前已合并部分的最后一个节点。  </li>
+<li>当 l1、l2 均非空时，比较两节点值：<br>• 较小者接到 cur.next，对应链表指针前进一步。<br>  cur 也前进一步。  </li>
+<li>退出循环后，必有一条链已空，直接把另一条剩余部分一次挂到 cur.next。  </li>
+<li>返回 dummy.next（真正的头结点）。</li>
+</ul>
+<h4 id="代码"><a href="#代码" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-Java">/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode() {}
+ *     ListNode(int val) { this.val = val; }
+ *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }
+ * }
+ */
+class Solution {
+    public ListNode mergeTwoLists(ListNode list1, ListNode list2) {
+        ListNode dummy = new ListNode();
+        ListNode cur = dummy;
+        ListNode l1 = list1;
+        ListNode l2 = list2;
+        while(l1!=null &amp;&amp; l2!=null){
+            if(l1.val&lt;=l2.val){
+                cur.next = l1;
+                l1 = l1.next;
+            }else{
+                cur.next = l2;
+                l2 = l2.next;
+            }
+            cur = cur.next;
+        }
+        if(l1!=null) cur.next = l1;
+        if(l2!=null) cur.next = l2;
+        return dummy.next;
+    }
+}
+</code></pre>
+<h4 id="复杂度"><a href="#复杂度" class="headerlink" title="复杂度"></a>复杂度</h4><p>时间：只遍历每个节点一次，O(m+n)，m、n 分别为两链表长度。<br>空间：只用了几个指针变量，O(1)（输出链表不计入额外空间）。</p>
+<hr>
+<h4 id="易错点"><a href="#易错点" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确做法</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>while 条件写成 `</td>
+<td></td>
+<td>`</td>
+</tr>
+<tr>
+<td>循环体内忘了移动 cur</td>
+<td>每次接完节点后 <code>cur = cur.next</code></td>
+<td>否则链表会断</td>
+</tr>
+<tr>
+<td>最后只处理 <code>l1 != null</code> 而漏掉 <code>l2</code></td>
+<td><code>if (l1 != null) cur.next = l1;</code> 之后再写 <code>else if (l2 != null)...</code> 或直接两条独立 if</td>
+<td>因为只有一个会非空，但保险写法是两条 if</td>
+</tr>
+<tr>
+<td>忘记返回 <code>dummy.next</code></td>
+<td>千万别 <code>return dummy</code></td>
+<td>dummy 是哨兵，真实头结点是 dummy.next</td>
+</tr>
+</tbody></table>
+<h3 id="2《两数相加》"><a href="#2《两数相加》" class="headerlink" title="2《两数相加》"></a>2《两数相加》</h3><h4 id="思路-1"><a href="#思路-1" class="headerlink" title="思路"></a>思路</h4><ul>
+<li>建一个哑结点 dummy，统一处理结果链表的首节点。  </li>
+<li>用 cur 指向当前结果链表的最后一个节点，初始指向 dummy。  </li>
+<li>维护一个整型变量 carry 记录进位，初始为 0。  </li>
+<li>只要 l1、l2 还有节点 <strong>或</strong> carry ≠ 0，就继续循环：<br>• 取出 l1、l2 当前节点的值（若节点为空则用 0 补位）。<br>• 计算 sum = 两节点值 + carry。<br>• 新建节点 <code>new ListNode(sum % 10)</code> 接到 cur.next。<br>• 更新 carry = sum / 10。<br>• cur 前进一步；l1、l2 若不为空也前进一步。  </li>
+<li>循环结束后所有位（包括最高位进位）均已生成，返回 dummy.next。</li>
+</ul>
+<h4 id="代码-1"><a href="#代码-1" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode() {}
+ *     ListNode(int val) { this.val = val; }
+ *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }
+ * }
+ */
+class Solution {
+    public ListNode addTwoNumbers(ListNode l1, ListNode l2) {
+        // 1. 哨兵节点，简化头结点处理
+        ListNode dummy = new ListNode();
+        ListNode cur   = dummy;
+
+        int carry = 0;              // 2. 进位标志，初始为 0
+
+        // 3. 只要任一链表还有节点，或仍有进位，就继续
+        while (l1 != null || l2 != null || carry != 0) {
+            int v1 = (l1 == null) ? 0 : l1.val;   // 取当前位，空则补 0
+            int v2 = (l2 == null) ? 0 : l2.val;
+
+            int sum   = v1 + v2 + carry;          // 4. 当前位 + 进位
+            carry     = sum / 10;                 // 5. 更新进位
+            cur.next  = new ListNode(sum % 10);   // 6. 新建节点保存个位
+            cur       = cur.next;                 // 7. 推进结果指针
+
+            // 8. 两链表指针同步前进
+            if (l1 != null) l1 = l1.next;
+            if (l2 != null) l2 = l2.next;
+        }
+
+        return dummy.next;   // 9. 哨兵的下一个节点才是头结点
+    }
+}
+</code></pre>
+<h4 id="复杂度-1"><a href="#复杂度-1" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(max(m, n))</td>
+<td>每个节点最多遍历一次</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(max(m, n))</td>
+<td>新建链表长度最多 max(m, n)+1</td>
+</tr>
+</tbody></table>
+<h4 id="易错点-1"><a href="#易错点-1" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>直接 <code>cur.next.val = ...</code></td>
+<td>必须先 <code>new ListNode(...)</code> 再赋值</td>
+</tr>
+<tr>
+<td>忘记维护 <code>carry</code></td>
+<td>每轮更新 <code>carry = sum / 10</code></td>
+</tr>
+<tr>
+<td>循环条件仅写 <code>l1 != null &amp;&amp; l2 != null</code></td>
+<td>需包含 <code>carry != 0</code>，否则最高位进位会漏</td>
+</tr>
+<tr>
+<td>剩余节点直接拼接</td>
+<td>剩余节点仍需逐位加 <code>carry</code></td>
+</tr>
+<tr>
+<td>返回 <code>dummy</code></td>
+<td>应返回 <code>dummy.next</code></td>
+</tr>
+</tbody></table>
+<h4 id="TODO-两数相加2"><a href="#TODO-两数相加2" class="headerlink" title="TODO 两数相加2"></a>TODO 两数相加2</h4><h3 id="206《反转链表》"><a href="#206《反转链表》" class="headerlink" title="206《反转链表》"></a>206《反转链表》</h3><h4 id="思路-2"><a href="#思路-2" class="headerlink" title="思路"></a>思路</h4><p>参考<a href="https://leetcode.cn/problems/reverse-linked-list/solutions/99711/fan-zhuan-lian-biao-shuang-zhi-zhen-di-gui-yao-mo-/">206. 反转链表 - 力扣（LeetCode）</a></p>
+<ul>
+<li>定义两个指针： pre 和 cur ；pre 在前 cur 在后。</li>
+<li>每次让 pre 的 next 指向 cur ，实现一次局部反转</li>
+<li>局部反转完成之后，pre 和 cur 同时往前移动一个位置</li>
+<li>循环上述过程，直至 pre 到达链表尾部</li>
+</ul>
+<img src="https://pic.leetcode-cn.com/9ce26a709147ad9ce6152d604efc1cc19a33dc5d467ed2aae5bc68463fdd2888.gif" alt="img" style="zoom: 67%;">
+
+<h4 id="代码-2"><a href="#代码-2" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode() {}
+ *     ListNode(int val) { this.val = val; }
+ *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }
+ * }
+ */
+class Solution {
+    public ListNode reverseList(ListNode head) {
+        ListNode pre = null;   // 已反转部分的头结点
+        ListNode cur = head;   // 当前待反转节点
+        ListNode tmp = null;   // 临时保存 cur 的下一个节点
+        while (cur != null) {
+            tmp = cur.next;    // 1. 先保存下一节点
+            cur.next = pre;    // 2. 反转指针
+            pre = cur;         // 3. pre 前进一步
+            cur = tmp;         // 4. cur 前进一步
+        }
+        return pre;            // 5. pre 指向新头结点  
+        //当 cur 变为 null，意味着链表已经遍历完了，pre 此时指向的是新链表的头节点
+    }
+}
+</code></pre>
+<h4 id="复杂度-2"><a href="#复杂度-2" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n)</td>
+<td>每个节点仅访问一次</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(1)</td>
+<td>仅用常数级指针变量，原地反转</td>
+</tr>
+</tbody></table>
+<h4 id="易错点-2"><a href="#易错点-2" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>忘记保存 <code>cur.next</code></td>
+<td>先用 <code>tmp = cur.next</code> 暂存</td>
+</tr>
+<tr>
+<td>返回 <code>cur</code> 而非 <code>pre</code></td>
+<td>循环结束时 <code>cur == null</code>，应返回 <code>pre</code></td>
+</tr>
+<tr>
+<td>修改指针顺序错误</td>
+<td>必须“先存 next，再反转，再移动双指针”</td>
+</tr>
+<tr>
+<td>未处理空链表</td>
+<td>当 <code>head == null</code> 时直接返回 <code>null</code> 即可（代码已隐含）</td>
+</tr>
+</tbody></table>
+<h3 id="92《反转链表-II》"><a href="#92《反转链表-II》" class="headerlink" title="92《反转链表 II》"></a>92《反转链表 II》</h3><h4 id="思路-3"><a href="#思路-3" class="headerlink" title="思路"></a>思路</h4><ul>
+<li>建一个哑结点 dummy，指向原头结点，方便处理 left = 1 时头结点也会反转的场景。  </li>
+<li>用 p1 指向待反转区间的前驱节点：<br>• 从 dummy 出发，走 left-1 步即可到达。  </li>
+<li>用 start 指向待反转区间的第一个节点（p1.next）。  </li>
+<li>用 end 指向待反转区间的最后一个节点：<br>• 从 start 出发，再向右走 right-left 步即可到达。  </li>
+<li>断开区间：<br>• 保存 end.next 为 next，后续需要重新拼接。<br>• 令 end.next = null，形成独立子链表 start→…→end。  </li>
+<li>反转子链表：<br>• 调用 reverse(start)，返回反转后的新头 newHead。  </li>
+<li>重新接回：<br>• p1.next 指向 newHead；<br>• 原 start（现反转后的尾）指向之前保存的 next。  </li>
+<li>返回 dummy.next 即为最终链表。</li>
+</ul>
+<h4 id="代码-3"><a href="#代码-3" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode() {}
+ *     ListNode(int val) { this.val = val; }
+ *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }
+ * }
+ */
+class Solution {
+    public ListNode reverseBetween(ListNode head, int left, int right) {
+        ListNode dummy = new ListNode(-1, head);
+        
+        // 1. 找到 [left] 前驱 p1
+        ListNode p1 = dummy;
+        for (int i = 1; i &lt; left; i++) {
+            p1 = p1.next;
+        }
+        
+        // 2. 定位反转段头 start
+        ListNode start = p1.next;
+        
+        // 3. 找到反转段尾 end
+        ListNode end = start;
+        for (int i = left; i &lt; right; i++) {
+            end = end.next;
+        }
+        
+        // 4. 断开并反转
+        ListNode next = end.next;
+        end.next = null;
+        p1.next = reverse(start);
+        
+        // 5. 拼回
+        start.next = next;
+        
+        return dummy.next;
+    }
+
+    // 通用反转链表函数
+    private ListNode reverse(ListNode head) {
+        ListNode cur = head;
+        ListNode pre = null;
+        ListNode tmp = null;
+        while (cur != null) {
+            tmp = cur.next;
+            cur.next = pre;
+            pre = cur;
+            cur = tmp;
+        }
+        return pre;
+    }
+}
+</code></pre>
+<h4 id="复杂度-3"><a href="#复杂度-3" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n)</td>
+<td>链表最多遍历两次（定位 + 反转）</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(1)</td>
+<td>仅用常数级指针变量，原地反转</td>
+</tr>
+</tbody></table>
+<h4 id="易错点-3"><a href="#易错点-3" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>未使用哑结点</td>
+<td>使用 dummy，方便处理 left = 1 的情况</td>
+</tr>
+<tr>
+<td>未保存 end.next</td>
+<td>反转前先用变量保存，否则后续无法正确拼接链表</td>
+</tr>
+<tr>
+<td>反转后忘记把原 start 接到剩余链表</td>
+<td><code>start.next = next</code> 必须在反转后执行</td>
+</tr>
+<tr>
+<td>返回 head 而非 dummy.next</td>
+<td>头结点可能已变更，应返回 dummy.next</td>
+</tr>
+<tr>
+<td>reverse 函数忘记返回新头</td>
+<td>反转后返回 pre，即新头结点</td>
+</tr>
+</tbody></table>
+<h3 id="24《两两交换链表节点》"><a href="#24《两两交换链表节点》" class="headerlink" title="24《两两交换链表节点》"></a>24《两两交换链表节点》</h3><h4 id="思路-4"><a href="#思路-4" class="headerlink" title="思路"></a>思路</h4><ul>
+<li>建一个哑结点 dummy，指向原头结点，方便处理头结点本身要被交换的场景。  </li>
+<li>用 pre 指向<strong>已交换部分的最后一个节点</strong>，初始指向 dummy。  </li>
+<li>用 cur 指向<strong>当前待交换对的第一个节点</strong>，初始指向 head。  </li>
+<li>只要 cur 和 cur.next 均非空，就继续循环：<br>• 用 nxt 保存 cur.next（即当前对的第二个节点）。<br>• pre.next 指向 nxt，把 nxt 提前到 cur 前面。<br>• cur.next 指向 nxt.next，把 cur 接到下一对的头部。<br>• nxt.next 指向 cur，完成本对交换。<br>• pre 移动到 cur（已交换对的末尾）。<br>• cur 移动到 cur.next（下一对的第一个节点）。  </li>
+<li>循环结束后所有相邻节点均已两两交换，返回 dummy.next。</li>
+</ul>
+<h4 id="代码-4"><a href="#代码-4" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode() {}
+ *     ListNode(int val) { this.val = val; }
+ *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }
+ * }
+ */
+class Solution {
+    public ListNode swapPairs(ListNode head) {
+        ListNode dummy = new ListNode(0, head);
+        ListNode pre = dummy;
+        ListNode cur = head;
+
+        while (cur != null &amp;&amp; cur.next != null) {
+            ListNode nxt = cur.next;
+
+            pre.next = nxt;        // 1. pre 指向第二个节点
+            cur.next = nxt.next;   // 2. 第一个节点指向下一对的头
+            nxt.next = cur;        // 3. 第二个节点指向第一个节点
+
+            pre = cur;             // 4. pre 移动到已交换对的末尾
+            cur = cur.next;        // 5. cur 移动到下一对的头
+        }
+        return dummy.next;
+    }
+}
+</code></pre>
+<h4 id="复杂度-4"><a href="#复杂度-4" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n)</td>
+<td>每个节点只遍历一次</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(1)</td>
+<td>仅用常数级指针变量，原地交换</td>
+</tr>
+</tbody></table>
+<h4 id="易错点-4"><a href="#易错点-4" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>未使用哑结点</td>
+<td>使用 dummy 处理头结点交换</td>
+</tr>
+<tr>
+<td>交换后未移动 cur</td>
+<td>每轮末尾必须 <code>cur = cur.next</code></td>
+</tr>
+<tr>
+<td>指针顺序写反</td>
+<td>严格按照 <code>pre→nxt→cur→nextPair</code> 顺序调整</td>
+</tr>
+<tr>
+<td>返回 head 而非 dummy.next</td>
+<td>头结点可能已变更，应返回 dummy.next</td>
+</tr>
+</tbody></table>
+<h3 id="25《K-个一组翻转链表》"><a href="#25《K-个一组翻转链表》" class="headerlink" title="25《K 个一组翻转链表》"></a>25《K 个一组翻转链表》</h3><h4 id="思路-5"><a href="#思路-5" class="headerlink" title="思路"></a>思路</h4><ul>
+<li>建一个哑结点 dummy，指向原头结点，方便处理 k 整除头结点的情况。  </li>
+<li>用 pre 指向<strong>已翻转部分的最后一个节点</strong>，初始指向 dummy。  </li>
+<li>用 end 作为<strong>滑动窗口的右端</strong>，初始也指向 dummy。  </li>
+<li>只要 end.next 非空，就继续：<br>• 让 end 先走 k 步，若中途遇到 null，说明剩余不足 k，直接返回。<br>• 保存当前段头结点 start = pre.next。<br>• 保存后一段头结点 tmp = end.next。<br>• 断开当前段：end.next = null。<br>• 翻转 start 到 end 的子链表，返回新头 newHead。<br>• 重新拼接：pre.next = newHead，start.next = tmp。<br>• pre 和 end 都移动到 start（当前段的末尾）。  </li>
+<li>循环结束后整个链表分段翻转完成，返回 dummy.next。</li>
+</ul>
+<h4 id="代码-5"><a href="#代码-5" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode() {}
+ *     ListNode(int val) { this.val = val; }
+ *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }
+ * }
+ */
+class Solution {
+    public ListNode reverseKGroup(ListNode head, int k) {
+        ListNode dummy = new ListNode(0, head);
+        ListNode pre = dummy;
+        ListNode end = dummy;
+
+        while (end.next != null) {
+            // 1. end 先走 k 步
+            for (int i = 0; i &lt; k &amp;&amp; end != null; i++) {
+                end = end.next;
+            }
+            if (end == null) break;  // 剩余不足 k
+
+            // 2. 保存关键节点
+            ListNode start = pre.next;
+            ListNode tmp = end.next;
+
+            // 3. 断开 &amp; 翻转
+            end.next = null;
+            pre.next = reverse(start);
+            start.next = tmp;
+
+            // 4. 更新 pre &amp; end 到下一组起点前
+            pre = start;
+            end = start;
+        }
+        return dummy.next;
+    }
+
+    // 通用翻转函数
+    private ListNode reverse(ListNode head) {
+        ListNode cur = head;
+        ListNode pre = null;
+        ListNode tmp = null;
+        while (cur != null) {
+            tmp = cur.next;
+            cur.next = pre;
+            pre = cur;
+            cur = tmp;
+        }
+        return pre;
+    }
+}
+</code></pre>
+<h4 id="复杂度-5"><a href="#复杂度-5" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n)</td>
+<td>每个节点至多遍历两次（定位 + 反转）</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(1)</td>
+<td>仅用常数级指针变量</td>
+</tr>
+</tbody></table>
+<h4 id="易错点-5"><a href="#易错点-5" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>未检测剩余节点是否够 k</td>
+<td>用 end 先走 k 步，为 null 即跳出循环</td>
+</tr>
+<tr>
+<td>翻转后未正确拼接前后两段</td>
+<td>保存 start、tmp 并正确连接</td>
+</tr>
+<tr>
+<td>pre/end 未移动到当前段末尾</td>
+<td>翻转后 <code>pre = end = start</code></td>
+</tr>
+<tr>
+<td>循环条件写成 <code>end != null</code></td>
+<td>用 <code>end.next != null</code> 可提前终止无效遍历</td>
+</tr>
+<tr>
+<td>reverse 函数忘记返回新头</td>
+<td>返回 pre，即翻转后的头结点</td>
+</tr>
+</tbody></table>
+<h4 id="变体"><a href="#变体" class="headerlink" title="变体"></a>变体</h4><h5 id="最后一组不足k个也进行反转"><a href="#最后一组不足k个也进行反转" class="headerlink" title="最后一组不足k个也进行反转"></a>最后一组不足k个也进行反转</h5><p>为了在剩余节点不足 k 个时也进行反转，我们只需要修改处理这个“剩余部分”的逻辑。</p>
+<p>当前，<code>if (end == null) break;</code> 这条语句直接放弃了对剩余部分的处理。我们要做的是，在 <code>while</code> 循环结束时，对剩下的那部分链表（无论其长度如何）执行一次反转操作。</p>
+<p><code>while</code> 循环结束后：</p>
+<ul>
+<li><code>pre</code> 指针正位于上一个被反转分组的末尾节点（或者，如果从未进行过反转，则 <code>pre</code> 仍然是 <code>dummy</code> 节点）。</li>
+<li><code>pre.next</code> 指向的是剩余部分的头节点。</li>
+</ul>
+<p>因此，我们只需要在 <code>while</code> 循环之后，对 <code>pre.next</code> 开始的链表进行一次反转即可。这只需要在 <code>while</code> 循环外添加一行代码。只需要再<code>while</code> 循环之后、<code>return</code> 语句之前，增加了一行 <code>pre.next = reverse(pre.next);</code>。</p>
+<pre><code class="line-numbers language-Java">/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ * int val;
+ * ListNode next;
+ * ListNode() {}
+ * ListNode(int val) { this.val = val; }
+ * ListNode(int val, ListNode next) { this.val = val; this.next = next; }
+ * }
+ */
+class Solution {
+    public ListNode reverseKGroup(ListNode head, int k) {
+        ListNode dummy = new ListNode(0, head);
+        ListNode pre = dummy;
+        ListNode end = dummy;
+
+        while (end.next != null) {
+            // 1. end 先走 k 步
+            for (int i = 0; i &lt; k &amp;&amp; end != null; i++) {
+                end = end.next;
+            }
+            if (end == null) {
+                // 剩余不足 k 个，跳出循环，后续统一处理
+                break;
+            }
+
+            // 2. 保存关键节点
+            ListNode start = pre.next;
+            ListNode tmp = end.next;
+
+            // 3. 断开 &amp; 翻转
+            end.next = null;
+            pre.next = reverse(start);
+            start.next = tmp;
+
+            // 4. 更新 pre &amp; end 到下一组起点前
+            pre = start;
+            end = start;
+        }
+
+        // ***** 唯一的修改 *****
+        // 循环结束后，pre 指向最后一个完整翻转组的尾部
+        // pre.next 指向剩余部分的头部，直接翻转剩余部分
+        pre.next = reverse(pre.next);
+
+        return dummy.next;
+    }
+
+    // 通用翻转函数 (无需修改)
+    private ListNode reverse(ListNode head) {
+        ListNode cur = head;
+        ListNode pre = null;
+        ListNode tmp = null;
+        while (cur != null) {
+            tmp = cur.next;
+            cur.next = pre;
+            pre = cur;
+            cur = tmp;
+        }
+        return pre;
+    }
+}
+</code></pre>
+<h5 id="仅反转奇数组-偶数组"><a href="#仅反转奇数组-偶数组" class="headerlink" title="仅反转奇数组 / 偶数组"></a>仅反转奇数组 / 偶数组</h5><p>核心思路：</p>
+<ol>
+<li><strong>引入计数器</strong>：在 <code>while</code> 循环外初始化一个计数器，例如 <code>int groupIndex = 1;</code>。</li>
+<li><strong>条件性反转</strong>：在 <code>while</code> 循环内部，当我们成功找到一个完整的 k 元素分组后，检查 <code>groupIndex</code> 的值。<ul>
+<li>如果需要反转奇数组，就在 <code>groupIndex</code> 为奇数时执行反转逻辑。</li>
+<li>如果需要反转偶数组，就在 <code>groupIndex</code> 为偶数时执行反转逻辑。</li>
+</ul>
+</li>
+<li><strong>更新指针</strong>：<ul>
+<li><strong>如果执行了反转</strong>：<code>pre</code> 指针的更新方式不变，移动到反转后分组的末尾（即原来的 <code>start</code> 节点）。</li>
+<li><strong>如果未执行反转</strong>：我们必须手动将 <code>pre</code> 指针移动到这个未反转分组的末尾（即 <code>end</code> 节点），为下一次迭代做准备。</li>
+</ul>
+</li>
+<li><strong>递增计数器</strong>：在每次循环（无论是否反转）结束时，将 <code>groupIndex</code> 加一。</li>
+</ol>
+<pre><code class="line-numbers language-Java">class Solution {
+    public ListNode reverseOddKGroups(ListNode head, int k) {
+        if (head == null || k &lt;= 1) {
+            return head;
+        }
+        
+        ListNode dummy = new ListNode(0, head);
+        ListNode pre = dummy;
+        ListNode end = dummy;
+        int groupIndex = 1; // 分组计数器，从 1 开始
+
+        while (true) {
+            // 1. end 先走 k 步，找到当前组的尾部
+            for (int i = 0; i &lt; k &amp;&amp; end != null; i++) {
+                end = end.next;
+            }
+            // 如果 end 为 null，说明剩余节点不足 k 个，或刚好处理完
+            if (end == null) {
+                break;
+            }
+
+            // 2. 根据 groupIndex 的奇偶性决定是否反转
+            ListNode start = pre.next;
+            
+            if (groupIndex % 2 == 1) { // 是奇数组，执行反转
+                ListNode nextGroupStart = end.next;
+                end.next = null; // 断开链表
+                pre.next = reverse(start); // 反转并连接
+                start.next = nextGroupStart; // 连接回剩余部分
+                
+                // 更新 pre 指针到反转后分组的末尾（即原 start 节点）
+                pre = start;
+            } else { // 是偶数组，不反转，直接跳到该组末尾
+                pre = end;
+            }
+            
+            // 3. 为下一次循环做准备
+            end = pre; // 将 end 重置到 pre 的位置
+            groupIndex++; // 计数器加一
+        }
+        return dummy.next;
+    }
+
+    // 通用反转函数 (无需修改)
+    private ListNode reverse(ListNode head) {
+        ListNode pre = null;
+        ListNode cur = head;
+        while (cur != null) {
+            ListNode tmp = cur.next;
+            cur.next = pre;
+            pre = cur;
+            cur = tmp;
+        }
+        return pre;
+    }
+}
+</code></pre>
+<h3 id="160《链表相交节点》"><a href="#160《链表相交节点》" class="headerlink" title="160《链表相交节点》"></a>160《链表相交节点》</h3><h4 id="思路-6"><a href="#思路-6" class="headerlink" title="思路"></a>思路</h4><ul>
+<li>若两链表有交点，则从交点到尾部为公共部分，长度相同。  </li>
+<li>设链表 A 长度 a，链表 B 长度 b，公共部分长度 c。  </li>
+<li>让双指针 <code>l1</code>、<code>l2</code> 分别从 <code>headA</code>、<code>headB</code> 出发：<br>• 走到尾后立刻换到另一条链表的头继续走；<br>• 两指针第二次相遇时，走过的路程均为 <strong>a + b - c</strong>，恰好在交点处相遇；<br>• 若无交点，两指针最终同时为 null，返回 null 即可。  </li>
+<li>时间 O(a + b)，空间 O(1)。</li>
+</ul>
+<h4 id="代码-6"><a href="#代码-6" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode(int x) {
+ *         val = x;
+ *         next = null;
+ *     }
+ * }
+ */
+public class Solution {
+    public ListNode getIntersectionNode(ListNode headA, ListNode headB) {
+        if (headA == null || headB == null) return null;
+
+        ListNode l1 = headA;
+        ListNode l2 = headB;
+
+        // 双指针交替走，同速同终点
+        while (l1 != l2) {
+            l1 = (l1 == null) ? headB : l1.next;
+            l2 = (l2 == null) ? headA : l2.next;
+        }
+        return l1; // 交点或 null
+    }
+}
+</code></pre>
+<h4 id="复杂度-6"><a href="#复杂度-6" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n)</td>
+<td>n = len(A) + len(B)</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(1)</td>
+<td>仅用两个指针，无额外空间</td>
+</tr>
+</tbody></table>
+<h4 id="易错点-6"><a href="#易错点-6" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>循环条件写成 <code>l1.next != l2.next</code></td>
+<td>应比较节点自身 <code>l1 != l2</code>，否则漏判单节点交点</td>
+</tr>
+<tr>
+<td>未处理空链表</td>
+<td>先判空，直接返回 null</td>
+</tr>
+<tr>
+<td>走到尾后未切换到另一条链表</td>
+<td>用 <code>?:</code> 表达式在 <code>null</code> 时切换链头</td>
+</tr>
+<tr>
+<td>返回 <code>l1.next</code></td>
+<td>返回 <code>l1</code> 即可，无交点时同为 null</td>
+</tr>
+</tbody></table>
+<h3 id="234《回文链表》"><a href="#234《回文链表》" class="headerlink" title="234《回文链表》"></a>234《回文链表》</h3><h4 id="思路-7"><a href="#思路-7" class="headerlink" title="思路"></a>思路</h4><ul>
+<li>把所有节点值顺序存入 <strong>线性容器</strong>（如 <code>ArrayList</code>）。  </li>
+<li>用双指针 <code>left</code>、<code>right</code> 分别从首尾向中间扫描：<br>• 若对应值不等，立即返回 <code>false</code>；<br>• 直至两指针交错，返回 <code>true</code>。  </li>
+<li>复杂度：时间 O(n)，空间 O(n)。</li>
+</ul>
+<h4 id="代码-7"><a href="#代码-7" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode() {}
+ *     ListNode(int val) { this.val = val; }
+ *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }
+ * }
+ */
+class Solution {
+    public boolean isPalindrome(ListNode head) {
+        // 1. 顺序收集节点值
+        List&lt;Integer&gt; vals = new ArrayList&lt;&gt;();
+        for (ListNode p = head; p != null; p = p.next) {
+            vals.add(p.val);
+        }
+
+        // 2. 双指针判回文
+        int left = 0, right = vals.size() - 1;
+        while (left &lt; right) {
+            if (!vals.get(left).equals(vals.get(right))) {
+                return false;
+            }
+            left++;
+            right--;
+        }
+        return true;
+    }
+}
+</code></pre>
+<h4 id="复杂度-7"><a href="#复杂度-7" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n)</td>
+<td>遍历链表 + 双指针扫描</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(n)</td>
+<td>额外 <code>ArrayList</code> 存储值</td>
+</tr>
+</tbody></table>
+<h4 id="易错点-7"><a href="#易错点-7" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>忘记判空链表</td>
+<td>空链表视为回文，直接返回 <code>true</code></td>
+</tr>
+<tr>
+<td>双指针比较用 <code>==</code></td>
+<td>对包装类型使用 <code>equals</code> 避免装箱比较错误</td>
+</tr>
+<tr>
+<td>双指针条件写成 <code>&lt;=</code></td>
+<td>写 <code>&lt;</code> 即可，左右相等时无需再比较</td>
+</tr>
+<tr>
+<td>额外空间 O(n) 不满足要求</td>
+<td>可用快慢指针+反转后半段实现 O(1)（面试进阶）</td>
+</tr>
+</tbody></table>
+<h4 id="思路2"><a href="#思路2" class="headerlink" title="思路2"></a>思路2</h4><ul>
+<li>用 <strong>快慢指针</strong> 找到链表中间节点，把链表拆成前后两段。  </li>
+<li><strong>反转后半段</strong>，得到新的头结点 <code>head2</code>。  </li>
+<li>同时遍历前半段 <code>head</code> 与反转后的后半段 <code>head2</code>：<br>• 值不等 → 非回文，直接返回 <code>false</code>；<br>• 全部相等 → 回文，返回 <code>true</code>。  </li>
+<li>（如需还原链表，可再反转一次后半段并接回。）  </li>
+<li>时间 O(n)，空间 O(1)。</li>
+</ul>
+<h4 id="代码-8"><a href="#代码-8" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    public boolean isPalindrome(ListNode head) {
+        ListNode mid = middleNode(head);      // 1. 找中点
+        ListNode head2 = reverseList(mid);    // 2. 反转后半段
+
+        // 3. 双指针同时遍历两段
+        while (head2 != null) {
+            if (head.val != head2.val) return false;
+            head = head.next;
+            head2 = head2.next;
+        }
+        return true;
+    }
+
+    /** 876. 链表的中间结点 */
+    private ListNode middleNode(ListNode head) {
+        ListNode slow = head, fast = head;
+        while (fast != null &amp;&amp; fast.next != null) {
+            slow = slow.next;
+            fast = fast.next.next;
+        }
+        return slow;
+    }
+
+    /** 206. 反转链表 */
+    private ListNode reverseList(ListNode head) {
+        ListNode pre = null, cur = head;
+        while (cur != null) {
+            ListNode nxt = cur.next;
+            cur.next = pre;
+            pre = cur;
+            cur = nxt;
+        }
+        return pre;
+    }
+}
+</code></pre>
+<h4 id="复杂度-8"><a href="#复杂度-8" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n)</td>
+<td>遍历链表 3 次</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(1)</td>
+<td>仅用常数级指针变量</td>
+</tr>
+</tbody></table>
+<h4 id="易错点-8"><a href="#易错点-8" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>快慢指针写错</td>
+<td><code>while (fast != null &amp;&amp; fast.next != null)</code></td>
+</tr>
+<tr>
+<td>反转后未同步遍历</td>
+<td>用两个指针同时从头和尾向中间扫描</td>
+</tr>
+<tr>
+<td>空链表未处理</td>
+<td>空链表视为回文，直接返回 true</td>
+</tr>
+<tr>
+<td>需要还原链表</td>
+<td>面试时可再反转一次后半段并接回</td>
+</tr>
+</tbody></table>
+<h3 id="141《环形链表》"><a href="#141《环形链表》" class="headerlink" title="141《环形链表》"></a>141《环形链表》</h3><h4 id="思路-8"><a href="#思路-8" class="headerlink" title="思路"></a>思路</h4><ul>
+<li>用 <strong>哈希表（HashSet）</strong> 记录遍历过的节点。  </li>
+<li>每走一步就检查当前节点是否已存在于集合中：<br>• 存在 → 有环，立即返回 <code>true</code>；<br>• 不存在 → 加入集合，继续向后。  </li>
+<li>走到 <code>null</code> 仍未重复 → 无环，返回 <code>false</code>。  </li>
+<li>时间 O(n)，空间 O(n)。</li>
+</ul>
+<h4 id="代码-9"><a href="#代码-9" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">/**
+ * Definition for singly-linked list.
+ * class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode(int x) {
+ *         val = x;
+ *         next = null;
+ *     }
+ * }
+ */
+public class Solution {
+    public boolean hasCycle(ListNode head) {
+        Set&lt;ListNode&gt; seen = new HashSet&lt;&gt;();
+        ListNode cur = head;
+        while (cur != null) {
+            if (seen.contains(cur)) return true;
+            seen.add(cur);
+            cur = cur.next;
+        }
+        return false;
+    }
+}
+</code></pre>
+<h4 id="复杂度-9"><a href="#复杂度-9" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n)</td>
+<td>每个节点最多遍历一次</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(n)</td>
+<td>哈希表存储所有节点引用</td>
+</tr>
+</tbody></table>
+<h4 id="易错点-9"><a href="#易错点-9" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>使用值比较</td>
+<td>必须比较 <strong>节点对象本身</strong></td>
+</tr>
+<tr>
+<td>未判空链表</td>
+<td>空链表直接返回 <code>false</code></td>
+</tr>
+<tr>
+<td>空间要求 O(1) 场景</td>
+<td>改用快慢指针（面试高频进阶）</td>
+</tr>
+</tbody></table>
+<h3 id="142《环形链表-II》"><a href="#142《环形链表-II》" class="headerlink" title="142《环形链表 II》"></a>142《环形链表 II》</h3><h4 id="思路-9"><a href="#思路-9" class="headerlink" title="思路"></a>思路</h4><ul>
+<li>使用 <strong>哈希表（HashSet）</strong> 顺序遍历链表。  </li>
+<li>每访问一个节点，先查表：<br>• 若已存在 → 该节点即为 <strong>环入口</strong>，立即返回；<br>• 若不存在 → 存入集合，继续后移。  </li>
+<li>遍历到 <code>null</code> 仍未重复 → 无环，返回 <code>null</code>。  </li>
+<li>时间 O(n)，空间 O(n)。</li>
+</ul>
+<h4 id="代码-10"><a href="#代码-10" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">/**
+ * Definition for singly-linked list.
+ * class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode(int x) {
+ *         val = x;
+ *         next = null;
+ *     }
+ * }
+ */
+public class Solution {
+    public ListNode detectCycle(ListNode head) {
+        Set&lt;ListNode&gt; seen = new HashSet&lt;&gt;();
+        ListNode cur = head;
+        while (cur != null) {
+            if (seen.contains(cur)) return cur; // 环入口
+            seen.add(cur);
+            cur = cur.next;
+        }
+        return null; // 无环
+    }
+}
+</code></pre>
+<h4 id="复杂度-10"><a href="#复杂度-10" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n)</td>
+<td>每个节点最多遍历一次</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(n)</td>
+<td>集合存储所有节点引用</td>
+</tr>
+</tbody></table>
+<h4 id="易错点-10"><a href="#易错点-10" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>仅比较节点值</td>
+<td>必须比较 <strong>节点对象本身</strong>（地址）</td>
+</tr>
+<tr>
+<td>未处理空链表</td>
+<td>空链表直接返回 <code>null</code></td>
+</tr>
+<tr>
+<td>空间要求 O(1) 场景</td>
+<td>改用快慢指针（面试高频进阶）</td>
+</tr>
+</tbody></table>
+<h3 id="快慢指针（Floyd-判圈法）"><a href="#快慢指针（Floyd-判圈法）" class="headerlink" title="快慢指针（Floyd 判圈法）"></a><strong>快慢指针（Floyd 判圈法）</strong></h3><ul>
+<li><code>hasCycle</code>（141）空间从 <strong>O(n) 降成 O(1)</strong>  </li>
+<li><code>detectCycle</code>（142）空间也从 <strong>O(n) 降成 O(1)</strong>  </li>
+</ul>
+<h4 id="141《环形链表》——快慢指针版"><a href="#141《环形链表》——快慢指针版" class="headerlink" title="141《环形链表》——快慢指针版"></a>141《环形链表》——快慢指针版</h4><pre><code class="line-numbers language-java">public class Solution {
+    public boolean hasCycle(ListNode head) {
+        ListNode slow = head, fast = head;
+        while (fast != null &amp;&amp; fast.next != null) {
+            slow = slow.next;
+            fast = fast.next.next;
+            if (slow == fast) return true; // 相遇即有环
+        }
+        return false;
+    }
+}
+</code></pre>
+<h4 id="142《环形链表-II》——快慢指针版"><a href="#142《环形链表-II》——快慢指针版" class="headerlink" title="142《环形链表 II》——快慢指针版"></a>142《环形链表 II》——快慢指针版</h4><pre><code class="line-numbers language-java">public class Solution {
+    public ListNode detectCycle(ListNode head) {
+        ListNode slow = head, fast = head;
+
+        // 1. 先找相遇点
+        boolean hasCycle = false;
+        while (fast != null &amp;&amp; fast.next != null) {
+            slow = slow.next;
+            fast = fast.next.next;
+            if (slow == fast) { hasCycle = true; break; }
+        }
+        if (!hasCycle) return null;
+
+        // 2. 一个指针回到头，再同步走
+        ListNode ptr = head;
+        while (ptr != slow) {
+            ptr = ptr.next;
+            slow = slow.next;
+        }
+        return ptr; // 环入口
+    }
+}
+</code></pre>
+<h4 id="复杂度对比"><a href="#复杂度对比" class="headerlink" title="复杂度对比"></a>复杂度对比</h4><table>
+<thead>
+<tr>
+<th>方案</th>
+<th>时间</th>
+<th>空间</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>HashSet</td>
+<td>O(n)</td>
+<td>O(n)</td>
+<td>直接、易写</td>
+</tr>
+<tr>
+<td>快慢指针</td>
+<td>O(n)</td>
+<td>O(1)</td>
+<td>面试高频、进阶要求</td>
+</tr>
+</tbody></table>
+<p>因此，<strong>在 O(1) 空间要求下，用快慢指针更好</strong>。</p>
+<h3 id="138《随机链表的复制》"><a href="#138《随机链表的复制》" class="headerlink" title="138《随机链表的复制》"></a>138《随机链表的复制》</h3><h4 id="思路-10"><a href="#思路-10" class="headerlink" title="思路"></a>思路</h4><ul>
+<li>使用 <strong>哈希表</strong> 辅助，分两趟完成：  <ol>
+<li><strong>第一次遍历</strong>：顺序遍历原链表，为每个原节点创建对应的新节点，并存入 <code>map&lt;原节点, 新节点&gt;</code>。  </li>
+<li><strong>第二次遍历</strong>：再次顺序遍历原链表，通过哈希表把新节点的 <code>next</code> 和 <code>random</code> 指针一次性映射到正确的新节点上。  </li>
+</ol>
+</li>
+<li>哈希表保证 <strong>O(1)</strong> 时间定位任意旧节点对应的新节点。  </li>
+<li>时间 O(N)，空间 O(N)。</li>
+</ul>
+<h4 id="代码-11"><a href="#代码-11" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">/*
+// Definition for a Node.
+class Node {
+    int val;
+    Node next;
+    Node random;
+
+    public Node(int val) {
+        this.val = val;
+        this.next = null;
+        this.random = null;
+    }
+}
+*/
+class Solution {
+    // 时间复杂度 O(N)，空间复杂度 O(N)
+    public Node copyRandomList(Node head) {
+        if (head == null) return null;
+
+        Map&lt;Node, Node&gt; map = new HashMap&lt;&gt;();
+        Node curr = head;
+
+        // 1. 第一次遍历：创建新节点并建立旧→新的映射
+        while (curr != null) {
+            map.put(curr, new Node(curr.val));
+            curr = curr.next;
+        }
+
+        // 2. 第二次遍历：设置 next 和 random 指针
+        curr = head;
+        while (curr != null) {
+            Node clone = map.get(curr);
+            clone.next   = map.get(curr.next);   // 可为 null
+            clone.random = map.get(curr.random); // 可为 null
+            curr = curr.next;
+        }
+
+        return map.get(head); // 返回新链表头
+    }
+}
+</code></pre>
+<h4 id="复杂度-11"><a href="#复杂度-11" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(N)</td>
+<td>两次线性遍历</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(N)</td>
+<td>哈希表存储所有节点引用</td>
+</tr>
+</tbody></table>
+<h4 id="易错点-11"><a href="#易错点-11" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>直接复制值导致指针错乱</td>
+<td>必须创建 <strong>新节点对象</strong>，并用哈希表做映射</td>
+</tr>
+<tr>
+<td><code>next</code>/<code>random</code> 指向旧节点</td>
+<td>用 <code>map.get(旧节点)</code> 翻译成 <strong>新节点</strong></td>
+</tr>
+<tr>
+<td>未处理空链表</td>
+<td>空链表直接返回 <code>null</code></td>
+</tr>
+<tr>
+<td>空间要求 O(1) 场景</td>
+<td>面试追问时改用 <strong>原地复制 + 拆分</strong> 双指针技巧</td>
+</tr>
+</tbody></table>
+<h3 id="148《排序链表》"><a href="#148《排序链表》" class="headerlink" title="148《排序链表》"></a>148《排序链表》</h3><h4 id="思路-11"><a href="#思路-11" class="headerlink" title="思路"></a>思路</h4><p><strong>先快慢指针切中点 → 递归排序左右段 → 双指针合并两段有序链表。</strong></p>
+<p>参考：<a href="https://leetcode.cn/problems/sort-list/solutions/13728/sort-list-gui-bing-pai-xu-lian-biao-by-jyd/?envType=study-plan-v2&amp;envId=top-100-liked">148. 排序链表 - 力扣（LeetCode）</a></p>
+<ul>
+<li><strong>自顶向下归并排序</strong>：  <ol>
+<li>用 <strong>快慢指针</strong> 把链表一分为二，得到左右两段；  </li>
+<li>递归排序左右两段；  </li>
+<li>合并两个已排序链表。  </li>
+</ol>
+</li>
+<li>时间复杂度 **O(n log n)**，空间复杂度 <strong>O(log n)</strong> （递归栈）。  </li>
+<li>整个过程中没有使用额外数组，只在原链表上断链、重连。</li>
+</ul>
+<p>通过递归实现链表归并排序，有以下两个环节：</p>
+<p><strong>分割 cut 环节</strong>： </p>
+<ul>
+<li>找到当前链表 中点，并从 中点 将链表断开（以便在下次递归 cut 时，链表片段拥有正确边界）；</li>
+<li>我们使用 fast,slow 快慢双指针法，奇数个节点找到中点，偶数个节点找到中心左边的节点。</li>
+<li>找到中点 slow 后，执行 slow.next = None 将链表切断。</li>
+<li>递归分割时，输入当前链表左端点 head 和中心节点 slow 的下一个节点 tmp(因为链表是从 slow 切断的)。</li>
+<li>cut 递归终止条件： 当 head.next == None 时，说明只有一个节点了，直接返回此节点。</li>
+</ul>
+<p><strong>合并 merge 环节</strong>： 将两个排序链表合并，转化为一个排序链表。</p>
+<ul>
+<li>双指针法合并，建立辅助 ListNode h 作为头部。</li>
+<li>设置两指针 left, right 分别指向两链表头部，比较两指针处节点值大小，由小到大加入合并链表头部，指针交替前进，直至添加完两个链表。</li>
+<li>返回辅助ListNode h 作为头部的下个节点 h.next。</li>
+<li>时间复杂度 O(l + r)，l, r 分别代表两个链表长度。</li>
+</ul>
+<p>当题目输入的 head == None 时，直接返回 None。</p>
+<img src="https://pic.leetcode-cn.com/8c47e58b6247676f3ef14e617a4686bc258cc573e36fcf67c1b0712fa7ed1699-Picture2.png" alt="Picture2.png" style="zoom: 50%;">
+
+<h4 id="代码-12"><a href="#代码-12" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode() {}
+ *     ListNode(int val) { this.val = val; }
+ *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }
+ * }
+ */
+class Solution {
+    public ListNode sortList(ListNode head) {
+        // 1. 递归出口
+        if (head == null || head.next == null) return head;
+
+        // 2. 快慢指针找中点，把链表切成两段
+        ListNode fast = head.next, slow = head;
+        while (fast != null &amp;&amp; fast.next != null) {
+            slow = slow.next;
+            fast = fast.next.next;
+        }
+        ListNode mid = slow.next;
+        slow.next = null;                   // 断链
+
+        // 3. 递归排序左右两段
+        ListNode left = sortList(head);
+        ListNode right = sortList(mid);
+
+        // 4. 合并已排序链表
+        ListNode dummy = new ListNode(0);
+        ListNode curr = dummy;
+        while (left != null &amp;&amp; right != null) {
+            if (left.val &lt; right.val) {
+                curr.next = left;
+                left = left.next;
+            } else {
+                curr.next = right;
+                right = right.next;
+            }
+            curr = curr.next;
+        }
+        curr.next = left != null ? left : right;
+        return dummy.next;
+    }
+}
+</code></pre>
+<h4 id="复杂度-12"><a href="#复杂度-12" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n log n)</td>
+<td>归并排序分解 + 合并</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(log n)</td>
+<td>递归栈深度，n 为链表长度</td>
+</tr>
+</tbody></table>
+<h4 id="易错点-12"><a href="#易错点-12" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>快慢指针写错导致切链不均</td>
+<td>fast 初始设为 <code>head.next</code>，slow 停在左段末尾</td>
+</tr>
+<tr>
+<td>合并时忘记断链</td>
+<td>先 <code>slow.next = null</code> 再递归</td>
+</tr>
+<tr>
+<td>合并后未正确接剩余段</td>
+<td>合并循环后直接把剩余链表挂到 <code>curr.next</code></td>
+</tr>
+<tr>
+<td>空间要求 O(1) 场景</td>
+<td>面试可追问 <strong>自底向上归并（迭代版）</strong> 实现</td>
+</tr>
+</tbody></table>
+<h3 id="23《合并-K-个升序链表》"><a href="#23《合并-K-个升序链表》" class="headerlink" title="23《合并 K 个升序链表》"></a>23《合并 K 个升序链表》</h3><h4 id="思路-12"><a href="#思路-12" class="headerlink" title="思路"></a>思路</h4><ul>
+<li>最小堆（优先队列） <strong>多路归并</strong>：  <ol>
+<li>把所有链表的 <strong>非空头节点</strong> 加入小根堆，按节点值排序。  </li>
+<li>每次弹出堆顶最小节点，接到结果链表末尾。  </li>
+<li>若该节点还有后续节点，将其后续节点继续入堆。  </li>
+</ol>
+</li>
+<li>时间复杂度 **O(L log m)**，L 为所有链表节点总数，m 为链表条数。  </li>
+<li>空间复杂度 **O(m)**，堆中同时最多存放 m 个节点。</li>
+</ul>
+<h4 id="代码-13"><a href="#代码-13" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode() {}
+ *     ListNode(int val) { this.val = val; }
+ *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }
+ * }
+ */
+class Solution {
+    public ListNode mergeKLists(ListNode[] lists) {
+        // 最小堆：按节点值升序
+        PriorityQueue&lt;ListNode&gt; queue = new PriorityQueue&lt;&gt;((a, b) -&gt; a.val - b.val);
+
+        // 1. 入堆：每链表的首节点
+        for (ListNode list : lists) {
+            if (list != null) queue.offer(list);
+        }
+
+        ListNode dummy = new ListNode();
+        ListNode cur = dummy;
+
+        // 2. 出堆 &amp; 接链
+        while (!queue.isEmpty()) {
+            ListNode tmp = queue.poll();    // 当前最小节点
+            cur.next = tmp;                 // 接在结果链表
+            cur = cur.next;
+
+            // 3. 如果该节点还有后续节点，继续入堆
+            if (tmp.next != null) queue.offer(tmp.next);
+        }
+
+        return dummy.next;
+    }
+}
+</code></pre>
+<h4 id="复杂度-13"><a href="#复杂度-13" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(L log m)</td>
+<td>L 为所有链表节点总数，m 为链表条数</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(m)</td>
+<td>堆中最多同时存放 m 个节点</td>
+</tr>
+</tbody></table>
+<h4 id="易错点-13"><a href="#易错点-13" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>忘记判空链表</td>
+<td>入堆前检查 <code>list != null</code></td>
+</tr>
+<tr>
+<td>使用 <code>==</code> 比较节点值</td>
+<td>优先队列自定义比较器用 <code>a.val - b.val</code></td>
+</tr>
+<tr>
+<td>未将后续节点继续入堆</td>
+<td>出堆后判断 <code>tmp.next != null</code> 再 <code>offer</code></td>
+</tr>
+<tr>
+<td>堆容量设置过大</td>
+<td>默认 <code>PriorityQueue</code> 即可，无需显式容量</td>
+</tr>
+<tr>
+<td>返回原头结点而非 dummy.next</td>
+<td>始终返回 <code>dummy.next</code> 保证结果正确</td>
+</tr>
+</tbody></table>
+<h3 id="146《LRU缓存机制》"><a href="#146《LRU缓存机制》" class="headerlink" title="146《LRU缓存机制》"></a>146《LRU缓存机制》</h3><h4 id="思路-13"><a href="#思路-13" class="headerlink" title="思路"></a>思路</h4><ul>
+<li><strong>数据结构</strong>：哈希表 + 双向链表  <ul>
+<li><code>HashMap&lt;Integer, Node&gt;</code> 实现 <strong>key → 节点</strong> 的 O(1) 查找  </li>
+<li><strong>双向链表</strong>（带哨兵 dummy）按 <strong>访问时间升序</strong> 维护节点，头为最新，尾为最旧  </li>
+</ul>
+</li>
+<li><strong>操作规则</strong>  <ul>
+<li><code>get</code>：查到节点后，先移除再插入头部（变最新）  </li>
+<li><code>put</code>：  <ol>
+<li>key 已存在 → 更新值并移到头部  </li>
+<li>key 不存在 → 新建节点插头部，若超容量则移除尾部节点  </li>
+</ol>
+</li>
+</ul>
+</li>
+<li>所有操作 <strong>O(1)</strong> 时间复杂度</li>
+</ul>
+<h4 id="代码-14"><a href="#代码-14" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class LRUCache {
+    class Node {
+        int key, val;
+        Node pre, next;
+        Node(int k, int v) { key = k; val = v; }
+    }
+
+    private final int capacity;
+    private final Map&lt;Integer, Node&gt; keyToNode = new HashMap&lt;&gt;();
+    private final Node dummy = new Node(-1, -1);
+
+    public LRUCache(int capacity) {
+        this.capacity = capacity;
+        dummy.next = dummy;
+        dummy.pre = dummy;
+    }
+
+    public int get(int key) {
+        Node node = getNode(key);
+        return node == null ? -1 : node.val;
+    }
+
+    public void put(int key, int value) {
+        Node node = getNode(key);
+        if (node != null) {          // 已存在：更新值并置最新
+            node.val = value;
+            return;
+        }
+
+        Node newNode = new Node(key, value);
+        addFirst(newNode);
+        keyToNode.put(key, newNode);
+
+        if (keyToNode.size() &gt; capacity) { // 超容量：删尾部
+            Node tail = dummy.pre;
+            remove(tail);
+            keyToNode.remove(tail.key);
+        }
+    }
+
+    /* 把节点挪到头部（最新） */
+    private Node getNode(int key) {
+        if (!keyToNode.containsKey(key)) return null;
+        Node node = keyToNode.get(key);
+        remove(node);
+        addFirst(node);
+        return node;
+    }
+
+    /* 链表头插 */
+    private void addFirst(Node x) {
+        x.next = dummy.next;
+        x.pre = dummy;
+        dummy.next.pre = x;
+        dummy.next = x;
+    }
+
+    /* 链表删除 */
+    private void remove(Node x) {
+        x.pre.next = x.next;
+        x.next.pre = x.pre;
+    }
+}
+</code></pre>
+<h4 id="复杂度-14"><a href="#复杂度-14" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(1)</td>
+<td>所有操作均为常数时间</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(capacity)</td>
+<td>哈希表 + 双向链表实际节点数</td>
+</tr>
+</tbody></table>
+<h4 id="易错点-14"><a href="#易错点-14" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>未使用哨兵 dummy</td>
+<td>用 dummy 头尾指针避免空指针</td>
+</tr>
+<tr>
+<td>节点移动未拆链再插</td>
+<td>先 <code>remove</code> 再 <code>addFirst</code> 保证顺序</td>
+</tr>
+<tr>
+<td>容量判断位置错误</td>
+<td>插入新节点后再判断并删除最旧节点</td>
+</tr>
+<tr>
+<td>删除尾部时忘记清哈希表</td>
+<td>同时 <code>remove</code> 链表节点 + <code>keyToNode.remove</code></td>
+</tr>
+</tbody></table>
+<h4 id="TODO-LFU"><a href="#TODO-LFU" class="headerlink" title="TODO LFU"></a>TODO LFU</h4><h2 id="二叉树"><a href="#二叉树" class="headerlink" title="二叉树"></a>二叉树</h2><h3 id="94《二叉树的中序遍历》"><a href="#94《二叉树的中序遍历》" class="headerlink" title="94《二叉树的中序遍历》"></a>94《二叉树的中序遍历》</h3><h4 id="思路-14"><a href="#思路-14" class="headerlink" title="思路"></a>思路</h4><blockquote>
+<p>按照 <strong>左子树 → 根节点 → 右子树</strong> 的顺序递归访问整棵树，并收集节点值。</p>
+</blockquote>
+<ul>
+<li><strong>数据结构</strong>：二叉树  </li>
+<li><strong>遍历方式</strong>：深度优先搜索（DFS）——中序递归  </li>
+<li><strong>实现要点</strong>  <ol>
+<li>递归终止条件：<code>root == null</code>。  </li>
+<li>先递归左子树，再访问根节点，最后递归右子树。  </li>
+</ol>
+</li>
+<li>每个节点仅访问一次，时间复杂度 **O(n)**，空间复杂度 **O(h)**（递归栈深度，<code>h</code> 为树高）。</li>
+</ul>
+<h4 id="代码-15"><a href="#代码-15" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    public List&lt;Integer&gt; inorderTraversal(TreeNode root) {
+        List&lt;Integer&gt; res = new ArrayList&lt;&gt;();
+        inorder(root, res);
+        return res;
+    }
+
+    // 辅助递归函数：中序遍历以 root 为根的子树，并把结果加入 res
+    private void inorder(TreeNode root, List&lt;Integer&gt; res) {
+        if (root == null) return;
+
+        inorder(root.left, res);   // 左
+        res.add(root.val);         // 根
+        inorder(root.right, res);  // 右
+    }
+}
+</code></pre>
+<h4 id="复杂度-15"><a href="#复杂度-15" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n)</td>
+<td>每个节点仅被访问一次</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(h)</td>
+<td>递归栈深度，最坏链表高度 <code>n</code></td>
+</tr>
+</tbody></table>
+<h4 id="易错点-15"><a href="#易错点-15" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>递归顺序写错</td>
+<td>严格按照 <strong>左 → 根 → 右</strong> 的顺序</td>
+</tr>
+<tr>
+<td>未判空直接递归</td>
+<td>先检查 <code>root == null</code> 再递归</td>
+</tr>
+</tbody></table>
+<h3 id="104《二叉树的最大深度》"><a href="#104《二叉树的最大深度》" class="headerlink" title="104《二叉树的最大深度》"></a>104《二叉树的最大深度》</h3><h4 id="思路-15"><a href="#思路-15" class="headerlink" title="思路"></a>思路</h4><blockquote>
+<p>递归地计算左右子树的最大深度，当前节点深度 = max(左深度, 右深度) + 1。</p>
+</blockquote>
+<ul>
+<li><p><strong>数据结构</strong>：二叉树  </p>
+</li>
+<li><p><strong>遍历方式</strong>：深度优先搜索（DFS）后序遍历  </p>
+</li>
+<li><p><strong>递归公式</strong>  </p>
+<pre><code>maxDepth(root) = max(maxDepth(root.left), maxDepth(root.right)) + 1
+</code></pre>
+</li>
+<li><p>每个节点仅访问一次，时间复杂度 **O(n)**，空间复杂度 **O(h)**（递归栈深度，<code>h</code> 为树高）。</p>
+</li>
+</ul>
+<hr>
+<h4 id="代码-16"><a href="#代码-16" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    public int maxDepth(TreeNode root) {
+        return computeDepth(root);
+    }
+
+    // 辅助函数：返回以 root 为根的子树的最大深度
+    private int computeDepth(TreeNode root) {
+        if (root == null) return 0;
+
+        int leftDepth  = computeDepth(root.left);
+        int rightDepth = computeDepth(root.right);
+
+        return Math.max(leftDepth, rightDepth) + 1;
+    }
+}
+</code></pre>
+<hr>
+<h4 id="复杂度-16"><a href="#复杂度-16" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n)</td>
+<td>每个节点仅访问一次</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(h)</td>
+<td>递归栈深度，最坏链表高度 <code>n</code></td>
+</tr>
+</tbody></table>
+<hr>
+<h4 id="易错点-16"><a href="#易错点-16" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>未处理空树</td>
+<td>空节点返回 0</td>
+</tr>
+<tr>
+<td>忘记加 1</td>
+<td>当前节点自身深度需 +1</td>
+</tr>
+<tr>
+<td>辅助函数暴露为 public</td>
+<td>递归辅助函数建议用 <code>private</code>，保持接口简洁</td>
+</tr>
+</tbody></table>
+<h3 id="543《二叉树直径》"><a href="#543《二叉树直径》" class="headerlink" title="543《二叉树直径》"></a>543《二叉树直径》</h3><h4 id="思路-16"><a href="#思路-16" class="headerlink" title="思路"></a>思路</h4><blockquote>
+<p>直径定义为 <strong>任意两节点间最长路径的边数</strong>（注意题目要求的是 <strong>边数</strong>，而不是节点数）。<br>最长路径一定经过某个节点的 <strong>左高 + 右高</strong>，因此可在一次 <strong>后序遍历</strong> 中同时：  </p>
+<ol>
+<li>计算当前节点的高度（到叶子节点的边数）。  </li>
+<li>用 <strong>左高 + 右高</strong> 更新全局最大直径。  </li>
+</ol>
+</blockquote>
+<ul>
+<li><strong>遍历方式</strong>：<strong>后序 DFS（自底向上）</strong>  </li>
+<li><strong>关键点</strong>  <ul>
+<li>全局变量 <code>maxD</code> 保存当前最大直径。  </li>
+<li>每个节点返回自身高度，供父节点拼接。  </li>
+</ul>
+</li>
+<li>每个节点仅访问一次，时间复杂度 **O(n)**，空间复杂度 **O(h)**（递归栈深度）。</li>
+</ul>
+<hr>
+<h4 id="代码-17"><a href="#代码-17" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    private int maxD = 0;          // 全局最大直径（边数）
+
+    public int diameterOfBinaryTree(TreeNode root) {
+        height(root);
+        return maxD;
+    }
+
+    // 返回以 root 为根的子树高度（到叶子节点的边数）
+    private int height(TreeNode root) {
+        if (root == null) return 0;          // 空子树高度为 0
+
+        int leftH  = height(root.left);      // 左子树高度
+        int rightH = height(root.right);     // 右子树高度
+
+        maxD = Math.max(maxD, leftH + rightH); // 经过当前节点的直径
+
+        return Math.max(leftH, rightH) + 1;  // 当前高度
+    }
+}
+</code></pre>
+<hr>
+<h4 id="复杂度-17"><a href="#复杂度-17" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n)</td>
+<td>每个节点仅访问一次</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(h)</td>
+<td>递归栈深度，最坏链表高度 <code>n</code></td>
+</tr>
+</tbody></table>
+<hr>
+<h4 id="易错点-17"><a href="#易错点-17" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>把直径当成节点数</td>
+<td>题目要求的是 <strong>边数</strong>，所以 <code>leftH + rightH</code> 即可</td>
+</tr>
+<tr>
+<td>只递归未更新全局变量</td>
+<td>必须维护 <code>maxD</code>，并在后序时实时更新</td>
+</tr>
+<tr>
+<td>返回高度时忘记 +1</td>
+<td>当前节点到子节点有一条边，高度为 <code>max(leftH, rightH) + 1</code></td>
+</tr>
+</tbody></table>
+<h3 id="226《翻转二叉树》"><a href="#226《翻转二叉树》" class="headerlink" title="226《翻转二叉树》"></a>226《翻转二叉树》</h3><h4 id="思路-17"><a href="#思路-17" class="headerlink" title="思路"></a>思路</h4><blockquote>
+<p><strong>前序遍历（根 → 左 → 右）</strong> 的递归框架：<br>先处理当前节点（交换左右孩子），再递归处理左右子树。</p>
+</blockquote>
+<ul>
+<li><strong>遍历方式</strong>：<strong>前序 DFS</strong>  <ol>
+<li>访问根节点：交换 <code>left</code> 与 <code>right</code>。  </li>
+<li>递归翻转左子树。  </li>
+<li>递归翻转右子树。  </li>
+</ol>
+</li>
+<li>每个节点仅访问一次，时间复杂度 **O(n)**，空间复杂度 **O(h)**。</li>
+</ul>
+<hr>
+<h4 id="代码-18"><a href="#代码-18" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    public TreeNode invertTree(TreeNode root) {
+        if (root == null) return null;
+
+        // 1. 根：交换左右子树
+        TreeNode tmp = root.left;
+        root.left = root.right;
+        root.right = tmp;
+
+        // 2. 左：递归翻转左子树
+        invertTree(root.left);
+        // 3. 右：递归翻转右子树
+        invertTree(root.right);
+
+        return root;
+    }
+}
+</code></pre>
+<hr>
+<h4 id="复杂度-18"><a href="#复杂度-18" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n)</td>
+<td>每个节点仅访问一次</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(h)</td>
+<td>递归栈深度，最坏链表高度 <code>n</code></td>
+</tr>
+</tbody></table>
+<hr>
+<h4 id="易错点-18"><a href="#易错点-18" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>交换后忘记递归</td>
+<td>交换完仍需递归处理左右子树</td>
+</tr>
+<tr>
+<td>新建节点浪费内存</td>
+<td>仅交换指针，不创建新节点</td>
+</tr>
+</tbody></table>
+<h3 id="101《对称二叉树》"><a href="#101《对称二叉树》" class="headerlink" title="101《对称二叉树》"></a>101《对称二叉树》</h3><h4 id="思路-18"><a href="#思路-18" class="headerlink" title="思路"></a>思路</h4><blockquote>
+<p>将“对称”判定问题转化为 <strong>两棵子树互为镜像</strong> 的问题。<br>采用 <strong>深度优先搜索（DFS）前序遍历</strong> 同时遍历两棵子树，一树向左、一树向右，边遍历边比较。</p>
+</blockquote>
+<ul>
+<li><strong>遍历方式</strong>：<strong>双指针 DFS</strong>  <ol>
+<li>比较当前节点值。  </li>
+<li>递归比较外侧：左左 vs 右右。  </li>
+<li>递归比较内侧：左右 vs 右左。  </li>
+</ol>
+</li>
+<li>每个节点仅访问一次，时间复杂度 **O(n)**，空间复杂度 **O(h)**（递归栈深度）。</li>
+</ul>
+<hr>
+<h4 id="代码-19"><a href="#代码-19" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    public boolean isSymmetric(TreeNode root) {
+        if (root == null) return true;          // 空树视为对称
+        return compare(root.left, root.right);  // 从左右子树开始比较
+    }
+
+    // 判断两棵子树是否互为镜像
+    private boolean compare(TreeNode left, TreeNode right) {
+        // 1. 同时为空 → 对称
+        if (left == null &amp;&amp; right == null) return true;
+        // 2. 仅一个为空 → 不对称
+        if (left == null || right == null) return false;
+        // 3. 值不相等 → 不对称
+        if (left.val != right.val) return false;
+
+        // 4. 递归比较外侧与内侧
+        boolean outer = compare(left.left, right.right);
+        boolean inner = compare(left.right, right.left);
+        return outer &amp;&amp; inner;
+    }
+}
+</code></pre>
+<hr>
+<h4 id="复杂度-19"><a href="#复杂度-19" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n)</td>
+<td>每个节点仅访问一次</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(h)</td>
+<td>递归栈深度，最坏链表高度 <code>n</code></td>
+</tr>
+</tbody></table>
+<hr>
+<h4 id="易错点-19"><a href="#易错点-19" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>未区分外侧、内侧递归</td>
+<td>明确 <code>left.left vs right.right</code> 与 <code>left.right vs right.left</code></td>
+</tr>
+<tr>
+<td>使用按位与 <code>&amp;</code> 替代逻辑与 <code>&amp;&amp;</code></td>
+<td>返回布尔值应使用 <code>&amp;&amp;</code>，语义更清晰</td>
+</tr>
+<tr>
+<td>未处理空树</td>
+<td>空树直接返回 <code>true</code>，视为对称</td>
+</tr>
+</tbody></table>
+<h3 id="437《路径总和-III》"><a href="#437《路径总和-III》" class="headerlink" title="437《路径总和 III》"></a>437《路径总和 III》</h3><h4 id="思路-19"><a href="#思路-19" class="headerlink" title="思路"></a>思路</h4><blockquote>
+<p>双层递归，枚举每个节点作为路径起点，向下累加节点值，实时减目标值，统计满足条件的路径。</p>
+</blockquote>
+<ul>
+<li><strong>枚举策略</strong>  <ol>
+<li>把每个节点都当成一次新的起点。  </li>
+<li>从该起点向下深度优先累加节点值，实时用剩余目标值 <code>target - node.val</code> 判断是否凑够。  </li>
+</ol>
+</li>
+<li><strong>双递归框架</strong>  <ul>
+<li><code>pathSum</code>：外层递归，枚举整棵树的所有节点为起点。  </li>
+<li><code>dfs</code>：内层递归，从给定节点出发向下统计满足条件的路径数。  </li>
+</ul>
+</li>
+<li>所有节点都会被枚举一次，每棵子树也会被完整遍历一次，时间复杂度 **O(n²)**，空间复杂度 **O(n)**（递归栈）。</li>
+</ul>
+<h4 id="代码-20"><a href="#代码-20" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    public int pathSum(TreeNode root, int targetSum) {
+        if (root == null) return 0;               // 空树直接返回 0
+        int rootSum = dfs(root, targetSum);       // ① 以当前节点为起点
+        int leftSum = pathSum(root.left, targetSum);  // ② 枚举左子树所有起点
+        int rightSum = pathSum(root.right, targetSum); // ③ 枚举右子树所有起点
+        return rootSum + leftSum + rightSum;      // 汇总整棵树结果
+    }
+    
+    private int dfs(TreeNode node, long target) {
+        if (node == null) return 0;
+        int count = 0;                            // 必须放在函数内，防止跨路径污染
+        if (node.val == target) count++;          // 当前节点恰好满足
+        count += dfs(node.left,  target - node.val);  // 左分支继续找剩余和
+        count += dfs(node.right, target - node.val);  // 右分支继续找剩余和
+        return count;                             // 返回以 node 为起点的总条数
+    }
+}
+</code></pre>
+<h4 id="复杂度-20"><a href="#复杂度-20" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n²)</td>
+<td>最坏情况下退化成链表，每个节点都向下遍历</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(n)</td>
+<td>递归栈深度，最坏链表高度 n</td>
+</tr>
+</tbody></table>
+<h4 id="易错点-20"><a href="#易错点-20" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>把 <code>count</code> 写成全局变量</td>
+<td>必须放在 <code>dfs</code> 函数内部，避免不同起点结果相互污染</td>
+</tr>
+<tr>
+<td>漏掉左右子树继续枚举起点</td>
+<td>外层递归一定要 <code>pathSum(root.left/right)</code> 而非 <code>dfs</code></td>
+</tr>
+<tr>
+<td>未用 <code>long</code> 存 <code>target</code></td>
+<td>节点值可能很大，累减后可能溢出 <code>int</code></td>
+</tr>
+</tbody></table>
+<h3 id="124《二叉树中的最大路径和》"><a href="#124《二叉树中的最大路径和》" class="headerlink" title="124《二叉树中的最大路径和》"></a>124《二叉树中的最大路径和》</h3><h4 id="思路-20"><a href="#思路-20" class="headerlink" title="思路"></a>思路</h4><ul>
+<li><strong>数据结构</strong>：二叉树  </li>
+<li><strong>遍历方式</strong>：一次 <strong>后序遍历</strong>（DFS 自底向上）  </li>
+<li><strong>核心思想</strong>  <ol>
+<li>每个节点视为路径的 <strong>“最高点”</strong>。  </li>
+<li>计算两条值：  <ul>
+<li><strong>单边最大贡献</strong>：只能选左或右一条分支继续向上延伸（负值直接舍弃为 0）。  </li>
+<li><strong>完整路径和</strong>：左 + 根 + 右 三者之和，用于更新全局最大值。  </li>
+</ul>
+</li>
+<li>全局变量 <code>maxSum</code> 实时记录 <strong>最大路径和</strong>。  </li>
+</ol>
+</li>
+<li>所有节点仅访问一次，时间复杂度 **O(n)**，空间复杂度 **O(h)**（树高）。</li>
+</ul>
+<h4 id="代码-21"><a href="#代码-21" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    int maxSum = Integer.MIN_VALUE;   // 全局最大路径和
+
+    public int maxPathSum(TreeNode root) {
+        dfs(root);                    // 启动后序遍历
+        return maxSum;
+    }
+
+    /**
+     * 后序遍历：返回以当前节点为根的“单边最大贡献”
+     * @param root 当前节点
+     * @return 当前节点能给父节点提供的最大单边和（≥0）
+     */
+    private int dfs(TreeNode root) {
+        if (root == null) return 0;
+
+        // 左右子树的单边最大贡献（负数直接取 0 表示不选）
+        int leftGain  = Math.max(dfs(root.left),  0);
+        int rightGain = Math.max(dfs(root.right), 0);
+
+        // 以当前节点为“最高点”的完整路径和
+        int curPathSum = root.val + leftGain + rightGain;
+        maxSum = Math.max(maxSum, curPathSum);    // 更新全局最大
+
+        // 返回给父节点的单边贡献：只能选较大的一边 + 当前节点值
+        return root.val + Math.max(leftGain, rightGain);
+    }
+}
+</code></pre>
+<h4 id="复杂度-21"><a href="#复杂度-21" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n)</td>
+<td>每个节点仅访问一次</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(h)</td>
+<td>递归栈深度，h 为树高</td>
+</tr>
+</tbody></table>
+<h4 id="易错点-21"><a href="#易错点-21" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>未用全局变量记录最大值</td>
+<td>维护 <code>maxSum</code> 并在后序过程中实时更新</td>
+</tr>
+<tr>
+<td>负增益未舍弃</td>
+<td><code>Math.max(dfs(...), 0)</code> 忽略负值贡献</td>
+</tr>
+<tr>
+<td>返回值写成完整路径和</td>
+<td>返回的是 <strong>单边贡献</strong>，只能选左或右 + 当前节点</td>
+</tr>
+<tr>
+<td>初始 <code>maxSum</code> 设为 0</td>
+<td>应设为 <code>Integer.MIN_VALUE</code> 防止全负数树出错</td>
+</tr>
+</tbody></table>
+<h4 id="与-437-题思想对比"><a href="#与-437-题思想对比" class="headerlink" title="与 437 题思想对比"></a>与 437 题思想对比</h4><table>
+<thead>
+<tr>
+<th align="left">维度</th>
+<th align="left">437 题（路径总和 III）</th>
+<th align="left">124 题（最大路径和）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">起点</td>
+<td align="left">枚举 <strong>所有节点</strong> 作为起点</td>
+<td align="left">每个节点只做 <strong>一次后序计算</strong></td>
+</tr>
+<tr>
+<td align="left">递归层数</td>
+<td align="left">双层递归，O(n²)</td>
+<td align="left">单层后序，O(n)</td>
+</tr>
+<tr>
+<td align="left">返回值</td>
+<td align="left">路径条数</td>
+<td align="left">单边最大贡献（给父节点用）</td>
+</tr>
+<tr>
+<td align="left">全局变量</td>
+<td align="left">无</td>
+<td align="left">记录全局最大路径和</td>
+</tr>
+</tbody></table>
+<h3 id="236《二叉树的最近公共祖先》"><a href="#236《二叉树的最近公共祖先》" class="headerlink" title="236《二叉树的最近公共祖先》"></a>236《二叉树的最近公共祖先》</h3><h4 id="思路-21"><a href="#思路-21" class="headerlink" title="思路"></a>思路</h4><ul>
+<li><strong>数据结构</strong>：普通二叉树（BST 性质未知）  </li>
+<li><strong>遍历方式</strong>：一次 <strong>后序遍历</strong>（DFS 自底向上）  </li>
+<li><strong>核心思想</strong>  <ol>
+<li>若当前节点为 <code>null</code> 或等于 <code>p</code> / <code>q</code>，直接返回该节点。  </li>
+<li>递归左右子树，得到左右搜索结果 <code>left</code>、<code>right</code>。  </li>
+<li>根据搜索结果判断：  <ul>
+<li><code>left</code> 与 <code>right</code> 均非空 → 当前节点即为 LCA。  </li>
+<li>仅一侧非空 → 非空侧继续向上传递。  </li>
+<li>均空 → 返回 <code>null</code>。  </li>
+</ul>
+</li>
+</ol>
+</li>
+<li>每个节点仅访问一次，时间复杂度 **O(n)**，空间复杂度 **O(h)**（树高）。</li>
+</ul>
+<p><img src="https://aband0n.oss-cn-nanjing.aliyuncs.com/img/image-20250804001429162.png" alt="image-20250804001429162"></p>
+<p>图片来自：<a href="https://www.bilibili.com/video/BV1W44y1Z7AR/?vd_source=3d6f8c0411732bf46c8dda7d2d09a422">二叉树的最近公共祖先【基础算法精讲 12】_哔哩哔哩_bilibili</a></p>
+<h4 id="代码-22"><a href="#代码-22" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    /**
+     * 后序遍历：自底向上寻找最近公共祖先
+     * @param root 当前子树根节点
+     * @param p    目标节点1
+     * @param q    目标节点2
+     * @return     LCA 节点或 null
+     */
+    public TreeNode lowestCommonAncestor(TreeNode root, TreeNode p, TreeNode q) {
+        // 1. 命中空节点或找到 p/q 直接返回
+        if (root == null || root == p || root == q) return root;
+
+        // 2. 后序遍历左右子树
+        TreeNode left  = lowestCommonAncestor(root.left,  p, q);
+        TreeNode right = lowestCommonAncestor(root.right, p, q);
+
+        // 3. 根据左右结果判断
+        if (left != null &amp;&amp; right != null) return root; // 左右均找到，当前即 LCA
+        return left != null ? left : right;             // 仅一侧非空，继续向上
+        //只要 left 非空，就返回 left；否则返回 right（此时如果 right 也是 null，自然返回 null）。
+        //和下面的等价
+        //if (left != null) return left;
+        //if (right != null) return right;
+        //return null;
+    }
+}
+</code></pre>
+<h4 id="复杂度-22"><a href="#复杂度-22" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n)</td>
+<td>每个节点仅访问一次</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(h)</td>
+<td>递归栈深度，h 为树高</td>
+</tr>
+</tbody></table>
+<h4 id="易错点-22"><a href="#易错点-22" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>未判断当前节点等于 p/q 的情况</td>
+<td>直接返回当前节点，作为向上传递的“信号”</td>
+</tr>
+<tr>
+<td>递归后未正确处理左右结果合并</td>
+<td>左右均非空才说明当前节点是 LCA</td>
+</tr>
+<tr>
+<td>递归前提前剪枝导致漏解</td>
+<td>必须完整遍历整棵树，不能提前返回</td>
+</tr>
+</tbody></table>
+<h3 id="108《将有序数组转换为二叉搜索树》"><a href="#108《将有序数组转换为二叉搜索树》" class="headerlink" title="108《将有序数组转换为二叉搜索树》"></a>108《将有序数组转换为二叉搜索树》</h3><h4 id="思路-22"><a href="#思路-22" class="headerlink" title="思路"></a>思路</h4><blockquote>
+<p>给定<strong>升序数组</strong>，要求构造<strong>高度平衡</strong>的二叉搜索树（BST）。<br>核心：每次取区间中点作为根节点，保证左右子树节点数相差 ≤ 1。</p>
+</blockquote>
+<ul>
+<li><strong>数据结构</strong>：升序数组 + 二叉搜索树  </li>
+<li><strong>遍历方式</strong>：递归（分治）  </li>
+<li><strong>关键步骤</strong>  <ol>
+<li>取当前区间 <code>[l, r]</code> 的中点 <code>mid</code> 作为根节点。  </li>
+<li>递归构建左子树 <code>[l, mid-1]</code>。  </li>
+<li>递归构建右子树 <code>[mid+1, r]</code>。  </li>
+</ol>
+</li>
+<li>每个元素仅访问一次，时间复杂度 **O(n)**，空间复杂度 **O(log n)**（递归栈高度）。</li>
+</ul>
+<hr>
+<h4 id="代码-23"><a href="#代码-23" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    public TreeNode sortedArrayToBST(int[] nums) {
+        return build(nums, 0, nums.length - 1);
+    }
+
+    // 辅助函数：将 nums[l..r] 构造成平衡 BST
+    private TreeNode build(int[] nums, int l, int r) {
+        if (l &gt; r) return null;
+
+        int mid = (l + r) &gt;&gt;&gt; 1;          // 防溢出位运算
+        TreeNode root = new TreeNode(nums[mid]);
+
+        root.left = build(nums, l, mid - 1);
+        root.right = build(nums, mid + 1, r);
+
+        return root;
+    }
+}
+</code></pre>
+<hr>
+<h4 id="复杂度-23"><a href="#复杂度-23" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n)</td>
+<td>每个元素仅访问一次</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(log n)</td>
+<td>递归栈深度，最坏为完全平衡树高度 log₂n</td>
+</tr>
+</tbody></table>
+<hr>
+<h4 id="易错点-23"><a href="#易错点-23" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>中点计算溢出</td>
+<td>使用 <code>(l + r) &gt;&gt;&gt; 1</code> 或 <code>l + (r - l) / 2</code></td>
+</tr>
+<tr>
+<td>区间边界错误</td>
+<td>左子树 <code>[l, mid-1]</code>，右子树 <code>[mid+1, r]</code></td>
+</tr>
+<tr>
+<td>递归终止条件写成 <code>l &gt;= r</code></td>
+<td>应为 <code>l &gt; r</code>，区间为空时才返回 <code>null</code></td>
+</tr>
+</tbody></table>
+<h3 id="98《验证二叉搜索树》"><a href="#98《验证二叉搜索树》" class="headerlink" title="98《验证二叉搜索树》"></a>98《验证二叉搜索树》</h3><h4 id="思路-23"><a href="#思路-23" class="headerlink" title="思路"></a>思路</h4><blockquote>
+<p>利用 <strong>BST 的上下界递归验证</strong> 思想：<br>每个节点在递归过程中都被赋予一个 **允许区间 <code>(lower, upper)</code>**，只有当其值落在此区间时才继续递归左右子树，并进一步收紧边界。  </p>
+<ul>
+<li>左子树所有节点值必须 <strong>&lt; 当前节点值</strong> → 新区间 <code>(lower, root.val)</code>  </li>
+<li>右子树所有节点值必须 <strong>&gt; 当前节点值</strong> → 新区间 <code>(root.val, upper)</code>  </li>
+</ul>
+</blockquote>
+<ul>
+<li><strong>遍历方式</strong>：<strong>先序 DFS</strong>（根 → 左 → 右）  </li>
+<li>时间复杂度 **O(n)**，空间复杂度 **O(h)**（递归栈深度，<code>h</code> 为树高）。</li>
+</ul>
+<hr>
+<h4 id="代码-24"><a href="#代码-24" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    public boolean isValidBST(TreeNode root) {
+        return isValid(root, Long.MIN_VALUE, Long.MAX_VALUE);
+    }
+
+    // 验证以 root 为根的子树所有节点值都在 (lower, upper) 内
+    private boolean isValid(TreeNode root, long lower, long upper) {
+        if (root == null) return true;
+
+        // 当前节点值必须严格在区间内
+        if (root.val &lt;= lower || root.val &gt;= upper) return false;
+
+        // 递归验证左右子树，并收紧边界
+        return isValid(root.left,  lower, root.val)
+            &amp;&amp; isValid(root.right, root.val, upper);
+    }
+}
+</code></pre>
+<hr>
+<h4 id="复杂度-24"><a href="#复杂度-24" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n)</td>
+<td>每个节点仅访问一次</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(h)</td>
+<td>递归栈深度，最坏链表高度 <code>n</code></td>
+</tr>
+</tbody></table>
+<hr>
+<h4 id="易错点-24"><a href="#易错点-24" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>使用 <code>int</code> 边界导致溢出</td>
+<td>采用 <code>long</code> 作为上下界初始值 (<code>MIN/MAX_VALUE</code>)</td>
+</tr>
+<tr>
+<td>允许等于边界</td>
+<td>必须 <strong>严格小于/大于</strong>，即 <code>&lt;</code> 与 <code>&gt;</code></td>
+</tr>
+<tr>
+<td>递归时边界传递错误</td>
+<td>左子树更新 <code>upper = root.val</code>，右子树更新 <code>lower = root.val</code></td>
+</tr>
+<tr>
+<td>遍历顺序未说明</td>
+<td>明确采用 <strong>先序 DFS</strong>，根节点先验证再递归</td>
+</tr>
+</tbody></table>
+<h3 id="105《从前序与中序遍历序列构造二叉树》"><a href="#105《从前序与中序遍历序列构造二叉树》" class="headerlink" title="105《从前序与中序遍历序列构造二叉树》"></a>105《从前序与中序遍历序列构造二叉树》</h3><h4 id="思路-24"><a href="#思路-24" class="headerlink" title="思路"></a>思路</h4><ul>
+<li><strong>数据结构</strong>：二叉树  </li>
+<li><strong>遍历方式</strong>：<strong>分治递归</strong>  </li>
+<li><strong>核心思想</strong>  <ol>
+<li>前序遍历第 1 个元素即为 <strong>根节点</strong>。  </li>
+<li>在中序遍历中找到该根节点，其左侧为 <strong>左子树中序区间</strong>，右侧为 <strong>右子树中序区间</strong>。  </li>
+<li>根据左子树长度，切分出 <strong>左/右子树的前序区间</strong>，递归构造左右子树。  </li>
+</ol>
+</li>
+<li>每次递归区间长度减 1，时间复杂度 **O(n²)**（<code>copyOfRange</code> 每次 O(n)），空间复杂度 **O(n)**（递归栈 + 新数组）。<br>若改用索引传递，可将时间优化到 **O(n)**。</li>
+</ul>
+<h4 id="代码-25"><a href="#代码-25" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    public TreeNode buildTree(int[] preorder, int[] inorder) {
+        int m = preorder.length;
+        int n = inorder.length;
+        if (m == 0 || n == 0) return null;
+
+        // 1. 前序首元素为根
+        TreeNode root = new TreeNode(preorder[0]);
+
+        // 2. 在中序中找到根的位置 i
+        for (int i = 0; i &lt; n; i++) {
+            if (preorder[0] == inorder[i]) {
+                // 3. 切分中序：左 [0, i)   右 (i, end)
+                int[] inLeft  = Arrays.copyOfRange(inorder, 0, i);
+                int[] inRight = Arrays.copyOfRange(inorder, i + 1, n);
+
+                // 4. 切分前序：左 [1, 1+i) 右 [1+i, end)
+                int[] preLeft  = Arrays.copyOfRange(preorder, 1, 1 + i);
+                int[] preRight = Arrays.copyOfRange(preorder, 1 + i, m);
+
+                // 5. 递归构造左右子树
+                root.left  = buildTree(preLeft, inLeft);
+                root.right = buildTree(preRight, inRight);
+                break;
+            }
+        }
+        return root;
+    }
+}
+</code></pre>
+<h4 id="复杂度-25"><a href="#复杂度-25" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n²)</td>
+<td>每次 <code>copyOfRange</code> 需 O(n)，共 n 次</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(n)</td>
+<td>递归栈 + 新数组</td>
+</tr>
+</tbody></table>
+<h4 id="易错点-25"><a href="#易错点-25" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>数组边界写错</td>
+<td><code>copyOfRange</code> 右端开区间，注意长度一致</td>
+</tr>
+<tr>
+<td><strong>前序/中序索引混淆</strong></td>
+<td>前序区间 <strong>起始下标为 1</strong>（根占 0），中序区间 <strong>起始下标为 0</strong></td>
+</tr>
+<tr>
+<td>忘记处理空数组</td>
+<td>入口先判空直接返回 <code>null</code></td>
+</tr>
+<tr>
+<td>前序区间起点/长度计算错误</td>
+<td>左子树长度 = 中序左区间长度</td>
+</tr>
+</tbody></table>
+<h3 id="114《二叉树展开为链表》"><a href="#114《二叉树展开为链表》" class="headerlink" title="114《二叉树展开为链表》"></a>114《二叉树展开为链表》</h3><h4 id="思路-25"><a href="#思路-25" class="headerlink" title="思路"></a>思路</h4><ul>
+<li><strong>数据结构</strong>：二叉树  </li>
+<li><strong>遍历方式</strong>：先序遍历（Pre-order）  </li>
+<li><strong>核心思想</strong>  <ol>
+<li>先序遍历整棵树，把节点按访问顺序保存到列表。  </li>
+<li>遍历列表，依次把每个节点的 <code>left</code> 置 <code>null</code>，<code>right</code> 指向下一节点，形成单链表。  </li>
+</ol>
+</li>
+<li>时间复杂度 **O(n)**，空间复杂度 **O(n)**（递归栈 + 列表）。<br>可优化为 <strong>O(1)</strong> 空间的“原地展开”：边遍历边修改指针。</li>
+</ul>
+<h4 id="代码-26"><a href="#代码-26" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    private final List&lt;TreeNode&gt; res = new ArrayList&lt;&gt;();
+
+    public void flatten(TreeNode root) {
+        if (root == null) return;
+
+        preOrder(root);                      // 1. 先序遍历收集节点
+
+        // 2. 按顺序重接指针
+        for (int i = 0; i &lt; res.size() - 1; i++) {
+            TreeNode cur = res.get(i);
+            cur.left  = null;                // 左指针置空
+            cur.right = res.get(i + 1);      // 右指针指向下一个节点
+        }
+    }
+
+    /** 先序遍历：根 → 左 → 右 */
+    private void preOrder(TreeNode root) {
+        if (root == null) return;
+        res.add(root);         // 根
+        preOrder(root.left);   // 左
+        preOrder(root.right);  // 右
+    }
+}
+</code></pre>
+<h4 id="复杂度-26"><a href="#复杂度-26" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n)</td>
+<td>每个节点被访问一次</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(n)</td>
+<td>递归栈 + <code>res</code> 列表</td>
+</tr>
+</tbody></table>
+<h4 id="易错点-26"><a href="#易错点-26" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>未清空 <code>left</code> 指针</td>
+<td>必须显式 <code>cur.left = null</code>，否则会形成环</td>
+</tr>
+<tr>
+<td>数组越界</td>
+<td>循环范围 <code>i &lt; res.size() - 1</code>，留最后一个节点</td>
+</tr>
+<tr>
+<td>空树未提前返回</td>
+<td>入口 <code>if (root == null) return</code></td>
+</tr>
+<tr>
+<td>原地展开时破坏遍历结构</td>
+<td>若用原地法，需“右-左-根”逆序遍历或 Morris 遍历</td>
+</tr>
+</tbody></table>
+<p>有！除了“先序遍历 + 列表”的做法，114 题还有 <strong>两种常见 O(1) 额外空间</strong> 的原地解法，下面给出思路、代码与对比。</p>
+<hr>
+<h4 id="解法-2：迭代-前驱指针（O-1-空间）"><a href="#解法-2：迭代-前驱指针（O-1-空间）" class="headerlink" title="解法 2：迭代 + 前驱指针（O(1) 空间）"></a>解法 2：迭代 + 前驱指针（O(1) 空间）</h4><h4 id="思路-26"><a href="#思路-26" class="headerlink" title="思路"></a>思路</h4><ol>
+<li>从根开始迭代。  </li>
+<li>对于每个节点：  <ul>
+<li>如果 <strong>左子树为空</strong>，直接往右走一步。  </li>
+<li>如果 <strong>左子树非空</strong>：  <ul>
+<li>找到左子树 <strong>最右节点</strong>（前驱）。  </li>
+<li>把 <strong>当前右子树</strong> 接到前驱的右指针。  </li>
+<li>把 <strong>左子树整体移到右边</strong>，并置空左指针。  </li>
+</ul>
+</li>
+</ul>
+</li>
+<li>重复直到整棵树变成链表。</li>
+</ol>
+<h4 id="代码-27"><a href="#代码-27" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    public void flatten(TreeNode root) {
+        TreeNode cur = root;
+        while (cur != null) {
+            if (cur.left != null) {              // 有左子树
+                TreeNode pre = cur.left;         // 找前驱
+                while (pre.right != null) pre = pre.right;
+                pre.right = cur.right;           // 右子树挂到前驱
+                cur.right = cur.left;            // 左子树移到右边
+                cur.left = null;                 // 置空左指针
+            }
+            cur = cur.right;                     // 继续处理下一个节点
+        }
+    }
+}
+</code></pre>
+<h4 id="解法-3：后序遍历-指针反转（O-1-空间，面试高频）"><a href="#解法-3：后序遍历-指针反转（O-1-空间，面试高频）" class="headerlink" title="解法 3：后序遍历 + 指针反转（O(1) 空间，面试高频）"></a>解法 3：后序遍历 + 指针反转（O(1) 空间，面试高频）</h4><h4 id="思路-27"><a href="#思路-27" class="headerlink" title="思路"></a>思路</h4><ul>
+<li>采用 <strong>逆序后序遍历</strong>（右 → 左 → 根）。  </li>
+<li>维护一个 <code>prev</code> 指针：始终指向 <strong>已展开的链表头</strong>。  </li>
+<li>每访问一个节点：  <ul>
+<li>把 <code>left</code> 置空，把 <code>right</code> 指向 <code>prev</code>，  </li>
+<li>更新 <code>prev = 当前节点</code>，继续向上。</li>
+</ul>
+</li>
+</ul>
+<h4 id="代码-28"><a href="#代码-28" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    private TreeNode prev = null;
+
+    public void flatten(TreeNode root) {
+        if (root == null) return;
+        flatten(root.right);  // 先右
+        flatten(root.left);   // 再左
+        root.left = null;     // 置空左
+        root.right = prev;    // 接链表头
+        prev = root;          // 更新链表头
+    }
+}
+</code></pre>
+<hr>
+<h4 id="三种做法对比"><a href="#三种做法对比" class="headerlink" title="三种做法对比"></a>三种做法对比</h4><table>
+<thead>
+<tr>
+<th>方案</th>
+<th>时间</th>
+<th>额外空间</th>
+<th>核心技巧</th>
+<th>代码简洁度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>先序+列表</td>
+<td>O(n)</td>
+<td>O(n)</td>
+<td>遍历后顺序重接指针</td>
+<td>★★★☆☆</td>
+</tr>
+<tr>
+<td>迭代前驱</td>
+<td>O(n)</td>
+<td>O(1)</td>
+<td>找前驱，原地搬子树</td>
+<td>★★★★☆</td>
+</tr>
+<tr>
+<td>后序指针</td>
+<td>O(n)</td>
+<td>O(1)</td>
+<td>逆序后序，prev 倒插</td>
+<td>★★★★☆</td>
+</tr>
+</tbody></table>
+<h3 id="102《二叉树的层序遍历》"><a href="#102《二叉树的层序遍历》" class="headerlink" title="102《二叉树的层序遍历》"></a>102《二叉树的层序遍历》</h3><h4 id="思路-28"><a href="#思路-28" class="headerlink" title="思路"></a>思路</h4><blockquote>
+<p>广度优先搜索（BFS）逐层展开，用队列保存当前层的所有节点，循环处理。</p>
+</blockquote>
+<ul>
+<li><strong>数据结构</strong>：二叉树  </li>
+<li><strong>遍历方式</strong>：BFS（队列）  </li>
+<li><strong>核心步骤</strong>  <ol>
+<li>先把根节点入队。  </li>
+<li>每次循环开始时记录当前队列长度 <code>len</code>，即当前层的节点个数。  </li>
+<li>依次弹出 <code>len</code> 个节点，收集它们的值，并将左右孩子入队，形成下一层。  </li>
+</ol>
+</li>
+<li>每个节点仅入队、出队各一次，时间复杂度 **O(n)**，空间复杂度 **O(n)**（队列最坏宽度）。  </li>
+</ul>
+<h4 id="代码-29"><a href="#代码-29" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    public List&lt;List&lt;Integer&gt;&gt; levelOrder(TreeNode root) {
+        List&lt;List&lt;Integer&gt;&gt; res = new ArrayList&lt;&gt;();
+        if (root == null) return res;
+
+        Queue&lt;TreeNode&gt; queue = new LinkedList&lt;&gt;();
+        queue.offer(root);
+
+        while (!queue.isEmpty()) {
+            int len = queue.size();            // 当前层节点数
+            List&lt;Integer&gt; levelRes = new ArrayList&lt;&gt;();
+            while (len-- &gt; 0) {                // 处理整层
+                TreeNode node = queue.poll();
+                levelRes.add(node.val);        // 收集值
+                if (node.left != null) queue.offer(node.left);
+                if (node.right != null) queue.offer(node.right);
+            }
+            res.add(levelRes);                 // 当前层结果加入总答案
+        }
+        return res;
+    }
+}
+</code></pre>
+<h4 id="复杂度-27"><a href="#复杂度-27" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n)</td>
+<td>每个节点仅进出队列一次</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(n)</td>
+<td>队列最大宽度，最坏情况为满二叉树</td>
+</tr>
+</tbody></table>
+<h4 id="易错点-27"><a href="#易错点-27" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>用 <code>pull()</code> 代替 <code>poll()</code></td>
+<td>队列接口只有 <code>poll()</code> / <code>remove()</code> / <code>offer()</code> 等方法</td>
+</tr>
+<tr>
+<td>把节点值直接加到结果列表</td>
+<td>应先收集到 <code>levelRes</code>，再把整层列表加入 <code>res</code></td>
+</tr>
+<tr>
+<td>循环内未记录当前层节点个数</td>
+<td>必须在进入内层循环前用 <code>len = queue.size()</code> 固定长度</td>
+</tr>
+</tbody></table>
+<h3 id="199《二叉树的右视图》"><a href="#199《二叉树的右视图》" class="headerlink" title="199《二叉树的右视图》"></a>199《二叉树的右视图》</h3><h4 id="思路-29"><a href="#思路-29" class="headerlink" title="思路"></a>思路</h4><blockquote>
+<p>层序遍历（BFS）的“最后一节点”视角：每层只保留 <strong>最右侧节点值</strong>。</p>
+</blockquote>
+<ul>
+<li><strong>数据结构</strong>：二叉树  </li>
+<li><strong>遍历方式</strong>：BFS（队列）  </li>
+<li><strong>核心步骤</strong>  <ol>
+<li>正常层序遍历。  </li>
+<li>每层循环中，当 <code>len == 1</code> 时把当前节点值加入结果即可。  </li>
+</ol>
+</li>
+<li>时间复杂度 **O(n)**，空间复杂度 **O(n)**。  </li>
+</ul>
+<h4 id="代码-30"><a href="#代码-30" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    public List&lt;Integer&gt; rightSideView(TreeNode root) {
+        List&lt;Integer&gt; ans = new ArrayList&lt;&gt;();
+        if (root == null) return ans;
+
+        Queue&lt;TreeNode&gt; queue = new LinkedList&lt;&gt;();
+        queue.offer(root);
+
+        while (!queue.isEmpty()) {
+            int len = queue.size();
+            for (int i = 0; i &lt; len; i++) {
+                TreeNode node = queue.poll();
+                if (i == len - 1) ans.add(node.val); // 每层最后一个节点
+                if (node.left != null) queue.offer(node.left);
+                if (node.right != null) queue.offer(node.right);
+            }
+        }
+        return ans;
+    }
+}
+</code></pre>
+<h4 id="复杂度-28"><a href="#复杂度-28" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n)</td>
+<td>每个节点仅访问一次</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(n)</td>
+<td>队列宽度，最坏满二叉树</td>
+</tr>
+</tbody></table>
+<h4 id="易错点-28"><a href="#易错点-28" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>返回 <code>List&lt;List&lt;Integer&gt;&gt;</code></td>
+<td>方法签名要求返回 <code>List&lt;Integer&gt;</code></td>
+</tr>
+<tr>
+<td>用 <code>levelRes</code> 再包一层</td>
+<td>直接收集每层最后一个节点值即可</td>
+</tr>
+<tr>
+<td>忘记判断 <code>root == null</code></td>
+<td>空树直接返回空列表</td>
+</tr>
+</tbody></table>
+<h3 id="199-扩展《二叉树的左视图》"><a href="#199-扩展《二叉树的左视图》" class="headerlink" title="199-扩展《二叉树的左视图》"></a>199-扩展《二叉树的左视图》</h3><h4 id="思路-30"><a href="#思路-30" class="headerlink" title="思路"></a>思路</h4><blockquote>
+<p>同样利用 <strong>层序遍历（BFS）</strong>，但每层只取 <strong>最左侧节点值</strong>。</p>
+</blockquote>
+<ul>
+<li>数据结构：二叉树  </li>
+<li>遍历方式：BFS（队列）  </li>
+<li>关键改动  <ol>
+<li>正常层序遍历。  </li>
+<li>每层循环中，当 <code>i == 0</code> 时把当前节点值加入结果即可。  </li>
+</ol>
+</li>
+<li>时间复杂度 **O(n)**，空间复杂度 **O(n)**。</li>
+</ul>
+<h4 id="代码-31"><a href="#代码-31" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    public List&lt;Integer&gt; leftSideView(TreeNode root) {
+        List&lt;Integer&gt; ans = new ArrayList&lt;&gt;();
+        if (root == null) return ans;
+
+        Queue&lt;TreeNode&gt; queue = new LinkedList&lt;&gt;();
+        queue.offer(root);
+
+        while (!queue.isEmpty()) {
+            int len = queue.size();
+            for (int i = 0; i &lt; len; i++) {
+                TreeNode node = queue.poll();
+                if (i == 0) ans.add(node.val);   // 每层第一个节点
+                if (node.left != null) queue.offer(node.left);
+                if (node.right != null) queue.offer(node.right);
+            }
+        }
+        return ans;
+    }
+}
+</code></pre>
+<h4 id="复杂度-29"><a href="#复杂度-29" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n)</td>
+<td>每个节点仅访问一次</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(n)</td>
+<td>队列宽度，最坏满二叉树</td>
+</tr>
+</tbody></table>
+<h4 id="易错点-29"><a href="#易错点-29" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>仍然取 <code>i == len - 1</code></td>
+<td>应改为 <code>i == 0</code> 获取最左侧节点</td>
+</tr>
+<tr>
+<td>忘记处理空树</td>
+<td><code>root == null</code> 时直接返回空列表</td>
+</tr>
+<tr>
+<td>返回 <code>List&lt;List&lt;Integer&gt;&gt;</code></td>
+<td>方法签名要求返回 <code>List&lt;Integer&gt;</code></td>
+</tr>
+</tbody></table>
+<p>TODO 二叉树的俯视图</p>
+<h2 id="哈希"><a href="#哈希" class="headerlink" title="哈希"></a>哈希</h2><h3 id="1《两数之和》"><a href="#1《两数之和》" class="headerlink" title="1《两数之和》"></a>1《两数之和》</h3><h4 id="思路-31"><a href="#思路-31" class="headerlink" title="思路"></a>思路</h4><blockquote>
+<p>一次遍历 + <strong>哈希表</strong> 实现 <strong>O(n)</strong> 查询：<br>在遍历 <code>nums</code> 的同时，把已访问过的元素及其下标存入 <code>HashMap</code>；<br>对于当前元素 <code>nums[i]</code>，只需在表中查找是否存在 <code>target - nums[i]</code>。  </p>
+<ul>
+<li>若存在 → 直接返回结果；  </li>
+<li>若不存在 → 把 <code>nums[i]</code> 及下标 <code>i</code> 存入表中，继续。  </li>
+</ul>
+</blockquote>
+<ul>
+<li><strong>数据结构</strong>：<code>HashMap&lt;值, 下标&gt;</code>  </li>
+<li><strong>遍历方式</strong>：一次顺序遍历（前向扫描）  </li>
+<li>时间复杂度 **O(n)**，空间复杂度 **O(n)**。</li>
+</ul>
+<hr>
+<h4 id="代码-32"><a href="#代码-32" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    public int[] twoSum(int[] nums, int target) {
+        HashMap&lt;Integer,Integer&gt; map = new HashMap&lt;&gt;();
+        int[] res = new int[2];
+        for(int i=0;i&lt;nums.length;i++){
+            int tmp = target-nums[i];
+            if(map.containsKey(tmp)) {
+                res[0]=map.get(tmp);
+                res[1]=i;
+                return res;
+            }
+
+            map.put(nums[i],i);
+        }
+        return res;
+    }
+}
+</code></pre>
+<hr>
+<h4 id="复杂度-30"><a href="#复杂度-30" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n)</td>
+<td>每个元素最多被哈希表查询一次</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(n)</td>
+<td>哈希表最多存储 n 个元素</td>
+</tr>
+</tbody></table>
+<hr>
+<h4 id="易错点-30"><a href="#易错点-30" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势（避坑指南）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>忘记 <code>containsKey</code>/<code>get</code> 用法</td>
+<td>先 <code>containsKey(key)</code> 判断，再 <code>get(key)</code> 取索引</td>
+</tr>
+<tr>
+<td>先 <code>put</code> 再查询</td>
+<td>必须先查询，再 <code>put</code>，否则会把同一下标重复计入</td>
+</tr>
+<tr>
+<td>未立即返回结果</td>
+<td>一旦找到匹配对，立即 <code>return new int[]{...}</code>，避免多余循环</td>
+</tr>
+</tbody></table>
+<h3 id="49《字母异位词分组》"><a href="#49《字母异位词分组》" class="headerlink" title="49《字母异位词分组》"></a>49《字母异位词分组》</h3><h4 id="思路-32"><a href="#思路-32" class="headerlink" title="思路"></a>思路</h4><blockquote>
+<p>利用<strong>排序后的字符串</strong>作为异位词的唯一标识；<br>按标识分组，最终把哈希表的所有值收集成列表返回。</p>
+</blockquote>
+<ul>
+<li><strong>数据结构</strong>：<code>Map&lt;String, List&lt;String&gt;&gt;</code>  </li>
+<li><strong>遍历方式</strong>：一次顺序遍历  </li>
+<li>时间复杂度 **O(n · k log k)**，空间复杂度 **O(n · k)**。</li>
+</ul>
+<hr>
+<h4 id="代码（保留原实现，仅加注释）"><a href="#代码（保留原实现，仅加注释）" class="headerlink" title="代码（保留原实现，仅加注释）"></a>代码（保留原实现，仅加注释）</h4><pre><code class="line-numbers language-java">class Solution {
+    public List&lt;List&lt;String&gt;&gt; groupAnagrams(String[] strs) {
+        // key：排序后的字符串；value：属于同一组的原始字符串列表
+        Map&lt;String, List&lt;String&gt;&gt; map = new HashMap&lt;&gt;();
+
+        for (String str : strs) {
+            // 1. 生成特征 key：把原字符串排序
+            char[] ch = str.toCharArray();
+            Arrays.sort(ch);
+            String sortedStr = new String(ch);
+
+            // 2. 如果 map 中没有该 key，先放一个空列表占位
+            if (!map.containsKey(sortedStr)) {
+                map.put(sortedStr, new ArrayList&lt;&gt;());
+            }
+
+            // 3. 将当前字符串加入对应的分组
+            map.get(sortedStr).add(str);
+        }
+
+        // 4. 把哈希表里所有分组一次性转成 List&lt;List&lt;String&gt;&gt;
+        return new ArrayList&lt;&gt;(map.values());
+    }
+}
+</code></pre>
+<hr>
+<h4 id="复杂度-31"><a href="#复杂度-31" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n · k log k)</td>
+<td>每个字符串排序耗时 <code>k log k</code></td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(n · k)</td>
+<td>哈希表存储全部字符串</td>
+</tr>
+</tbody></table>
+<hr>
+<h4 id="易错点-31"><a href="#易错点-31" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势（已在代码体现）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>先查后放，逻辑正确</td>
+<td>使用 <code>containsKey</code> + <code>put</code> + <code>get</code> 三连</td>
+</tr>
+<tr>
+<td>未排序直接当 key</td>
+<td>已用 <code>Arrays.sort</code> 保证 key 一致</td>
+</tr>
+<tr>
+<td>返回格式不正确</td>
+<td>用 <code>new ArrayList&lt;&gt;(map.values())</code> 构造返回</td>
+</tr>
+<tr>
+<td>先初始化空列表</td>
+<td><strong>第一次遇到某个 key</strong> 此时 <code>map</code> 里还没有这个 <code>sortedStr</code>，直接 <code>map.get(sortedStr)</code> 会返回 <code>null</code>，再调用 <code>.add(str)</code> 就会抛出 <strong>空指针异常</strong>。</td>
+</tr>
+</tbody></table>
+<h3 id="128《最长连续序列》"><a href="#128《最长连续序列》" class="headerlink" title="128《最长连续序列》"></a>128《最长连续序列》</h3><h4 id="思路-33"><a href="#思路-33" class="headerlink" title="思路"></a>思路</h4><blockquote>
+<p>哈希集合去重 + 一次线性扫描  </p>
+<ol>
+<li>将所有数字放入 <code>HashSet</code> 去重。  </li>
+<li>仅当 <code>num-1</code> 不在集合时，才把 <code>num</code> 视为一段连续序列的起点，向后扩展并统计长度。  </li>
+<li>全局变量记录最大长度。  </li>
+</ol>
+</blockquote>
+<ul>
+<li><strong>数据结构</strong>：<code>HashSet&lt;Integer&gt;</code>  </li>
+<li><strong>遍历方式</strong>：一次顺序遍历集合  </li>
+<li>时间复杂度 **O(n)**，空间复杂度 **O(n)**。</li>
+</ul>
+<hr>
+<h4 id="代码-33"><a href="#代码-33" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    public int longestConsecutive(int[] nums) {
+        int maxLen = 0;
+        HashSet&lt;Integer&gt; set = new HashSet&lt;&gt;();
+        // 1. 去重
+        for (int num : nums) {
+            set.add(num);
+        }
+
+        // 2. 只从序列起点开始向后扩展
+        for (int n : set) {
+            if (set.contains(n - 1)) continue; // 不是起点则跳过
+
+            int curMax = 1;                    // 当前连续长度
+            while (set.contains(n + 1)) {
+                n++;                           // 向后扩展
+                curMax++;
+            }
+            maxLen = Math.max(curMax, maxLen); // 更新全局最大
+        }
+        return maxLen;
+    }
+}
+</code></pre>
+<hr>
+<h4 id="复杂度-32"><a href="#复杂度-32" class="headerlink" title="复杂度"></a>复杂度</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结论</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间复杂度</td>
+<td>O(n)</td>
+<td>每个元素最多被访问两次（放入集合 + 扩展）</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(n)</td>
+<td>HashSet 存储全部元素</td>
+</tr>
+</tbody></table>
+<hr>
+<h4 id="易错点-32"><a href="#易错点-32" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>未去重</td>
+<td>使用 <code>HashSet</code> 去掉重复数字</td>
+</tr>
+<tr>
+<td>不从序列起点开始扩展</td>
+<td>先判断 <code>n-1</code> 是否存在，避免重复扫描同一条序列</td>
+</tr>
+<tr>
+<td>未使用去重后的set做遍历导致超时</td>
+<td>要遍历哈希表而不是原始数组，不然会超时，而哈希表去重了，所以遍历效率会高一些</td>
+</tr>
+</tbody></table>
+<h2 id="双指针"><a href="#双指针" class="headerlink" title="双指针"></a>双指针</h2><h3 id="283《移动零》"><a href="#283《移动零》" class="headerlink" title="283《移动零》"></a>283《移动零》</h3><h4 id="思路-34"><a href="#思路-34" class="headerlink" title="思路"></a>思路</h4><ul>
+<li>双指针：<br>• <code>fast</code> 负责扫描整个数组。<br>• <code>slow</code> 指向<strong>下一个应该放非零元素的位置</strong>。  </li>
+<li>当 <code>fast</code> 遇到非零元素时，与 <code>slow</code> 交换，并同时把 <code>slow</code> 右移一位。  </li>
+<li>遍历结束后，所有非零元素都被集中到数组前端，后面自然全是零。</li>
+</ul>
+<h4 id="代码-34"><a href="#代码-34" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-Java">class Solution {
+    public void moveZeroes(int[] nums) {
+        int slow = 0;
+        for (int fast = 0; fast &lt; nums.length; fast++) {
+            if (nums[fast] != 0) {
+                swap(nums, slow, fast);
+                slow++;
+            }
+        }
+    }
+
+    private void swap(int[] arr, int i, int j) {
+        int tmp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = tmp;
+    }
+}
+</code></pre>
+<h4 id="复杂度-33"><a href="#复杂度-33" class="headerlink" title="复杂度"></a>复杂度</h4><p>时间：每个元素只被访问一次，O(n)。<br>空间：只用到两个指针，O(1)。</p>
+<h4 id="易错点-33"><a href="#易错点-33" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确做法</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>把 <code>slow++</code> 写在循环外</td>
+<td>当交换完成后立即 <code>slow++</code></td>
+<td>否则会把非零元素覆盖掉</td>
+</tr>
+<tr>
+<td>自己实现 swap 时写成值互换</td>
+<td>必须交换 <strong>下标对应元素</strong>，而非值本身</td>
+<td>数组传参是值传递，需操作数组</td>
+</tr>
+<tr>
+<td>忘记写 <code>swap</code> 方法</td>
+<td>提取成私有方法，保持主逻辑清晰</td>
+<td>也可在循环内直接交换</td>
+</tr>
+<tr>
+<td>用额外数组存储结果</td>
+<td>题目要求 <strong>原地</strong> 修改</td>
+<td>不额外使用 O(n) 空间</td>
+</tr>
+</tbody></table>
+<h3 id="11《盛最多水的容器》"><a href="#11《盛最多水的容器》" class="headerlink" title="11《盛最多水的容器》"></a>11《盛最多水的容器》</h3><h4 id="思路-35"><a href="#思路-35" class="headerlink" title="思路"></a>思路</h4><ul>
+<li><strong>双指针</strong>：<br>• <code>left</code> 指向数组头，<code>right</code> 指向数组尾。  </li>
+<li><strong>面积公式</strong>：<code>area = (right - left) * min(height[left], height[right])</code>。  </li>
+<li><strong>贪心策略</strong>：<br>• 每次把“<strong>短板</strong>”向中间移动，才可能找到更大的面积；长板移动只会减小或不变。  </li>
+<li>重复上述步骤直到左右指针相遇，过程中记录最大面积。</li>
+</ul>
+<h4 id="代码-35"><a href="#代码-35" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    public int maxArea(int[] height) {
+        int max = 0;                          // 最大面积
+        int left = 0;                         // 左指针
+        int right = height.length - 1;        // 右指针
+
+        while (left &lt; right) {
+            // 计算当前窗口面积
+            int area = (right - left) * Math.min(height[left], height[right]);
+            max = Math.max(max, area);
+
+            // 移动短板：才可能得到更大面积
+            if (height[left] &lt; height[right]) {
+                left++;   // 左边矮，左指针右移
+            } else {
+                right--;  // 右边矮或等高，右指针左移
+            }
+        }
+        return max;
+    }
+}
+</code></pre>
+<h4 id="复杂度-34"><a href="#复杂度-34" class="headerlink" title="复杂度"></a>复杂度</h4><p>时间：O(n)，每个位置最多被访问一次。<br>空间：O(1)，仅用常数级指针。</p>
+<h4 id="易错点-34"><a href="#易错点-34" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确做法</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>把 <code>&lt;=</code> 写成 <code>&lt;</code> 导致死循环</td>
+<td><code>while (left &lt; right)</code></td>
+<td>相等时仍需比较一次面积</td>
+</tr>
+<tr>
+<td>移动指针时只移动高板</td>
+<td>必须移动 <strong>短板</strong></td>
+<td>移高板只会使面积更小或不变</td>
+</tr>
+<tr>
+<td>面积计算用 <code>max</code> 而非 <code>min</code></td>
+<td><code>(right - left) * Math.min(...)</code></td>
+<td>盛水量由短板决定</td>
+</tr>
+<tr>
+<td>移动短板的时候判断条件写成了<code>if (left &lt; right)</code></td>
+<td><code>if (height[left] &lt; height[right])</code></td>
+<td>分清楚含义</td>
+</tr>
+</tbody></table>
+<h3 id="15《三数之和》"><a href="#15《三数之和》" class="headerlink" title="15《三数之和》"></a>15《三数之和》</h3><h4 id="思路-36"><a href="#思路-36" class="headerlink" title="思路"></a>思路</h4><ul>
+<li><strong>排序</strong>：先对数组升序，方便双指针与去重。  </li>
+<li><strong>外层循环</strong>：固定一个数 <code>nums[i]</code>，把问题转化为在 <code>[i+1, n-1]</code> 中找两数之和等于 <code>-nums[i]</code>。  </li>
+<li><strong>双指针</strong>：<code>l = i+1, r = n-1</code>，根据 <code>nums[l] + nums[r]</code> 与 <code>-nums[i]</code> 的大小关系移动指针。  </li>
+<li><strong>去重</strong>：<br>• 外层跳过重复的 <code>nums[i]</code>；<br>• 每找到一组解后，跳过所有重复的 <code>nums[l]</code> 和 <code>nums[r]</code>。  </li>
+<li><strong>剪枝</strong>：若 <code>nums[i] &gt; 0</code>，则后续不可能再凑出 0，直接退出。</li>
+</ul>
+<h4 id="代码-36"><a href="#代码-36" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    public List&lt;List&lt;Integer&gt;&gt; threeSum(int[] nums) {
+        List&lt;List&lt;Integer&gt;&gt; res = new ArrayList&lt;&gt;();
+        Arrays.sort(nums);
+        int n = nums.length;
+
+        for (int i = 0; i &lt; n - 2; i++) { //i是三元组的第一个数的索引，相当于i最大取到i-3，最大i-2，r最大i-1
+            // 1. 外层去重
+            if (i &gt; 0 &amp;&amp; nums[i] == nums[i - 1]) continue;
+            // 2. 剪枝
+            if (nums[i] &gt; 0) break;
+
+            int target = -nums[i];
+            int l = i + 1, r = n - 1;
+
+            while (l &lt; r) {
+                int sum = nums[l] + nums[r];
+                if (sum &lt; target) {
+                    l++;
+                } else if (sum &gt; target) {
+                    r--;
+                } else {
+                    res.add(Arrays.asList(nums[i], nums[l], nums[r]));
+                    l++; r--;
+                    // 3. 内层去重
+                    while (l &lt; r &amp;&amp; nums[l] == nums[l - 1]) l++;
+                    while (l &lt; r &amp;&amp; nums[r] == nums[r + 1]) r--;
+                }
+            }
+        }
+        return res;
+    }
+}
+</code></pre>
+<h4 id="复杂度-35"><a href="#复杂度-35" class="headerlink" title="复杂度"></a>复杂度</h4><p>时间：排序 O(n log n) + 双指针 O(n²) → 总体 O(n²)。<br>空间：O(1)（忽略返回值占用的空间）。</p>
+<h4 id="易错点-35"><a href="#易错点-35" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确做法</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>外层未去重</td>
+<td><code>if (i &gt; 0 &amp;&amp; nums[i] == nums[i - 1]) continue;</code></td>
+<td>防止重复三元组</td>
+</tr>
+<tr>
+<td>未剪枝</td>
+<td><code>if (nums[i] &gt; 0) break;</code></td>
+<td>升序后若最小数&gt;0，后面必&gt;0</td>
+</tr>
+<tr>
+<td>内层未去重</td>
+<td>找到答案后 <code>l++、r--</code> 并继续跳过重复值</td>
+<td>避免同一组数字多次入队</td>
+</tr>
+<tr>
+<td>双指针边界条件</td>
+<td><code>while (l &lt; r)</code> 且移动后仍需 <code>l &lt; r</code> 再比较</td>
+<td>防止越界</td>
+</tr>
+</tbody></table>
+<h3 id="42《接雨水》"><a href="#42《接雨水》" class="headerlink" title="42《接雨水》"></a>42《接雨水》</h3><h4 id="思路-37"><a href="#思路-37" class="headerlink" title="思路"></a>思路</h4><p>参考：<a href="https://www.bilibili.com/video/BV1CmtZePErE/?spm_id_from=333.337.search-card.all.click&amp;vd_source=3d6f8c0411732bf46c8dda7d2d09a422">https://www.bilibili.com/video/BV1CmtZePErE/?spm_id_from=333.337.search-card.all.click&amp;vd_source=3d6f8c0411732bf46c8dda7d2d09a422</a></p>
+<ul>
+<li><strong>双指针 + 单调极值</strong>：<br>• 用 <code>left</code>、<code>right</code> 从两端向中间逼近。<br>• 用 <code>maxL</code>、<code>maxR</code> 分别记录<strong>已扫描部分的左右最高挡板</strong>。  </li>
+<li><strong>每次移动短板</strong>：<br>• 若 <code>height[left] &lt; height[right]</code>，说明左侧“桶壁”更低，由 <code>maxL</code> 决定当前能接多少水；反之右侧由 <code>maxR</code> 决定。  </li>
+<li><strong>计算并累加</strong>：<br>• 当前列能接的水 = <code>maxL - height[left]</code>（或 <code>maxR - height[right]</code>），若为负则视为 0（由于 <code>maxL</code> 始终 ≥ <code>height[left]</code>，实际不会出现负值）。  </li>
+<li>时间 O(n)，空间 O(1)。</li>
+</ul>
+<p><img src="https://aband0n.oss-cn-nanjing.aliyuncs.com/img/image-20250816144416811.png" alt="image-20250816144416811"></p>
+<h4 id="代码-37"><a href="#代码-37" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    public int trap(int[] height) {
+        int res = 0;
+        int left = 0, right = height.length - 1;
+        int maxL = 0, maxR = 0;
+
+        while (left &lt; right) {
+            if (height[left] &lt; height[right]) {
+                maxL = Math.max(maxL, height[left]); // 更新左侧最高挡板
+                res += maxL - height[left];          // 左侧当前列可接水量
+                left++;                              // 移动短板
+            } else {
+                maxR = Math.max(maxR, height[right]);// 更新右侧最高挡板
+                res += maxR - height[right];         // 右侧当前列可接水量
+                right--;                             // 移动短板
+            }
+        }
+        return res;
+    }
+}
+</code></pre>
+<h4 id="复杂度-36"><a href="#复杂度-36" class="headerlink" title="复杂度"></a>复杂度</h4><p>时间：O(n)，每个位置最多访问一次。<br>空间：O(1)，仅用常数级指针。</p>
+<h4 id="易错点-36"><a href="#易错点-36" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确做法</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>移动高板</td>
+<td>必须移动 <strong>短板</strong></td>
+<td>移高板不会增加水量</td>
+</tr>
+<tr>
+<td><code>maxL/maxR</code> 未实时更新</td>
+<td>每次进入分支前 <code>Math.max</code></td>
+<td>保证挡板是当前最大</td>
+</tr>
+<tr>
+<td>结果可能为负</td>
+<td>由于 <code>maxL ≥ height[left]</code> 等，不会出现负值</td>
+<td>无需额外判断</td>
+</tr>
+<tr>
+<td>边界循环条件</td>
+<td><code>while (left &lt; right)</code>，不能取等号</td>
+<td>两指针相遇时已完成计算</td>
+</tr>
+</tbody></table>
+<h2 id="滑动窗口"><a href="#滑动窗口" class="headerlink" title="滑动窗口"></a>滑动窗口</h2><h3 id="3《无重复字符的最长子串》"><a href="#3《无重复字符的最长子串》" class="headerlink" title="3《无重复字符的最长子串》"></a>3《无重复字符的最长子串》</h3><h4 id="思路-38"><a href="#思路-38" class="headerlink" title="思路"></a>思路</h4><ul>
+<li><strong>滑动窗口（双指针 + 哈希表）</strong><br>• <code>left</code>：窗口左边界（闭）<br>• <code>i</code>：窗口右边界（开，即当前字符下标）  </li>
+<li><strong>哈希表 <code>map</code></strong> 保存 <strong>每个字符最近出现的位置</strong>。  </li>
+<li><strong>核心逻辑</strong>：  <ol>
+<li>若当前字符 <code>s.charAt(i)</code> 已存在于窗口内，把 <code>left</code> 跳到 <strong>该字符上次出现位置的下一个位置</strong>（取 <code>max</code> 防止回退）。  </li>
+<li>更新 <code>map</code> 及当前字符位置。  </li>
+<li>计算窗口长度并更新全局最大值。</li>
+</ol>
+</li>
+</ul>
+<h4 id="代码-38"><a href="#代码-38" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    public int lengthOfLongestSubstring(String s) {
+        int left = 0;
+        int maxLen = 0;
+        Map&lt;Character, Integer&gt; map = new HashMap&lt;&gt;();
+
+        for (int i = 0; i &lt; s.length(); i++) {
+            char c = s.charAt(i);
+            // 若字符已出现过且位于当前窗口内，则移动左边界
+            if (map.containsKey(c)) {
+                left = Math.max(left, map.get(c) + 1);
+            }
+            // 更新字符最近位置
+            map.put(c, i);
+            // 更新最大长度
+            maxLen = Math.max(maxLen, i - left + 1);
+        }
+        return maxLen;
+    }
+}
+</code></pre>
+<h4 id="复杂度-37"><a href="#复杂度-37" class="headerlink" title="复杂度"></a>复杂度</h4><p>时间：O(n)，每个字符最多被左右指针各访问一次。<br>空间：O(min(n, |Σ|))，|Σ| 为字符集大小。</p>
+<h4 id="易错点-37"><a href="#易错点-37" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确做法</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>直接 <code>left = map.get(c) + 1</code> 导致回退</td>
+<td>用 <code>Math.max(left, map.get(c)+1)</code></td>
+<td>保证 <code>left</code> 只向右移动</td>
+</tr>
+<tr>
+<td>忘记更新字符最近位置</td>
+<td><code>map.put(c, i)</code> 必须写在每次循环最后</td>
+<td>否则后续无法正确判断重复位置</td>
+</tr>
+<tr>
+<td>初始 <code>maxLen</code> 设为 0</td>
+<td>空串返回 0，非空至少为 1</td>
+<td>代码自洽</td>
+</tr>
+<tr>
+<td>用数组代替哈希表</td>
+<td>若字符集固定且小（如 ASCII）可用 <code>int[128]</code></td>
+<td>常数级更快</td>
+</tr>
+</tbody></table>
+<h3 id="438《找到字符串中所有字母异位词》"><a href="#438《找到字符串中所有字母异位词》" class="headerlink" title="438《找到字符串中所有字母异位词》"></a>438《找到字符串中所有字母异位词》</h3><h4 id="思路-39"><a href="#思路-39" class="headerlink" title="思路"></a>思路</h4><ul>
+<li><strong>滑动窗口 + 定长比较</strong>：<br>• 窗口长度固定为 <code>p.length()</code>。<br>• 用两个长度 26 的计数数组 <code>sCount</code>、<code>pCount</code> 分别统计窗口内字符与目标字符频次。  </li>
+<li><strong>三步骤</strong>：  <ol>
+<li>初始化：先把前 <code>pLen</code> 个字符塞进数组。  </li>
+<li>首窗口若匹配则记录起点 0。  </li>
+<li>窗口每次右移一格：  <ul>
+<li>右端新字符入窗（<code>+1</code>）；  </li>
+<li>左端旧字符出窗（<code>-1</code>）；  </li>
+<li>比较两数组，若一致则记录起点 <code>i-pLen+1</code>。</li>
+</ul>
+</li>
+</ol>
+</li>
+</ul>
+<h4 id="代码-39"><a href="#代码-39" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    public List&lt;Integer&gt; findAnagrams(String s, String p) {
+        List&lt;Integer&gt; res = new ArrayList&lt;&gt;();
+        int sLen = s.length();
+        int pLen = p.length();
+        if (sLen &lt; pLen) return res;
+
+        int[] sCount = new int[26];
+        int[] pCount = new int[26];
+
+        /* 1. 初始化窗口 &amp; p 的计数 */
+        for (int i = 0; i &lt; pLen; i++) {
+            sCount[s.charAt(i) - 'a']++;
+            pCount[p.charAt(i) - 'a']++;
+        }
+        if (Arrays.equals(sCount, pCount)) res.add(0);
+
+        /* 2. 滑动窗口 */
+        for (int i = pLen; i &lt; sLen; i++) {
+            sCount[s.charAt(i) - 'a']++;          // 右端新字符入窗
+            sCount[s.charAt(i - pLen) - 'a']--;   // 左端旧字符出窗
+            if (Arrays.equals(sCount, pCount))    // 完全匹配
+                res.add(i - pLen + 1);
+        }
+        return res;
+    }
+}
+</code></pre>
+<h4 id="复杂度-38"><a href="#复杂度-38" class="headerlink" title="复杂度"></a>复杂度</h4><p>时间：O(n)（n 为 s 长度，每次 <code>Arrays.equals</code> 是 O(26) 可视为常数）。<br>空间：O(1)（两个固定 26 长度数组）。</p>
+<h4 id="易错点-38"><a href="#易错点-38" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确做法</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>窗口左右端更新顺序反了</td>
+<td>先 <code>++</code> 新字符，再 <code>--</code> 旧字符</td>
+<td>否则计数出错</td>
+</tr>
+<tr>
+<td>结果下标忘记 <code>+1</code></td>
+<td><code>res.add(i - pLen + 1)</code></td>
+<td>记录的是窗口左边界</td>
+</tr>
+<tr>
+<td>未处理边界首窗口</td>
+<td>初始化后先比较一次</td>
+<td>0 位置也可能是答案</td>
+</tr>
+<tr>
+<td>使用 <code>List&lt;int[]&gt;</code> 比较</td>
+<td>用 <code>Arrays.equals</code> 简洁</td>
+<td>长度 26 的数组常数级比较</td>
+</tr>
+</tbody></table>
+<h2 id="子串"><a href="#子串" class="headerlink" title="子串"></a>子串</h2><h3 id="303《区域和检索-数组不可变》"><a href="#303《区域和检索-数组不可变》" class="headerlink" title="303《区域和检索 - 数组不可变》"></a>303《区域和检索 - 数组不可变》</h3><h4 id="思路-40"><a href="#思路-40" class="headerlink" title="思路"></a>思路</h4><ul>
+<li><strong>前缀和数组</strong>：<br>• 预处理阶段把原数组转成前缀和 <code>s[]</code>，<code>s[i] = nums[0] + … + nums[i-1]</code>。<br>• 查询区间 <code>[left, right]</code> 时只需一次减法：<code>s[right+1] - s[left]</code>，O(1)。</li>
+</ul>
+<h4 id="代码-40"><a href="#代码-40" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class NumArray {
+    private final int[] s;   // 前缀和数组，s[i] = sum(nums[0..i-1])
+
+    public NumArray(int[] nums) {
+        int n = nums.length;
+        s = new int[n + 1];          // 下标 0 留空/哨兵，方便计算
+        for (int i = 0; i &lt; n; i++) {
+            s[i + 1] = s[i] + nums[i];
+        }
+    }
+
+    // 查询区间 [left, right] 的和
+    public int sumRange(int left, int right) {
+        return s[right + 1] - s[left];
+    }
+}
+
+/**
+ * Your NumArray object will be instantiated and called as such:
+ * NumArray obj = new NumArray(nums);
+ * int param_1 = obj.sumRange(left, right);
+ */
+</code></pre>
+<h4 id="复杂度-39"><a href="#复杂度-39" class="headerlink" title="复杂度"></a>复杂度</h4><ul>
+<li><strong>构建</strong>：O(n)  </li>
+<li><strong>查询</strong>：O(1)  </li>
+<li><strong>空间</strong>：O(n)，额外一个前缀和数组。</li>
+</ul>
+<h4 id="易错点-39"><a href="#易错点-39" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确做法</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>前缀和数组长度设错</td>
+<td><code>new int[n + 1]</code></td>
+<td>便于统一 <code>s[i+1] = s[i] + nums[i]</code></td>
+</tr>
+<tr>
+<td>查询区间边界写错</td>
+<td><code>s[right + 1] - s[left]</code></td>
+<td><code>left</code>、<code>right</code> 都是闭区间</td>
+</tr>
+<tr>
+<td>负数或空数组未处理</td>
+<td>题目保证非空 &amp; 下标合法</td>
+<td>无需额外判断</td>
+</tr>
+<tr>
+<td>每次查询仍用循环累加</td>
+<td>用前缀和一次减法</td>
+<td>否则退化成 O(n) 查询</td>
+</tr>
+</tbody></table>
+<h3 id="560《和为-K-的子数组》"><a href="#560《和为-K-的子数组》" class="headerlink" title="560《和为 K 的子数组》"></a>560《和为 K 的子数组》</h3><h4 id="思路-41"><a href="#思路-41" class="headerlink" title="思路"></a>思路</h4><ul>
+<li><strong>前缀和 + 哈希表</strong>：<br>• 维护一个<strong>前缀和到出现次数</strong>的哈希表。<br>• 把「求子数组和等于 k」转化为「找前缀和之差等于 k」。<br>• 公式：<code>count += pre.getOrDefault(sum - k, 0)</code>，即已出现过的前缀和中有多少个满足 <code>sum[i] = sum - k</code>。  </li>
+<li>初始化：空前缀和 <code>0</code> 出现 1 次，用于处理「从首元素开始」的子数组。</li>
+</ul>
+<p>当然也可以两层循环：</p>
+<pre><code class="line-numbers language-Java">class Solution {
+    public int subarraySum(int[] nums, int k) {
+        int n = nums.length;
+        int count=0;
+        int[] preSum = new int[n+1];
+        preSum[0]=0;
+        for(int i=0;i&lt;n;i++){
+            preSum[i+1]=preSum[i]+nums[i];
+        }
+
+        for(int i=0;i&lt;n;i++){
+            for(int j=i;j&lt;n;j++){
+                if(preSum[j+1]-preSum[i]==k){  // 如果写成 preSum[j] - preSum[i]，那就是 nums[0..j-1] - nums[0..i-1]，少算了 nums[j]。因此必须用 j+1 来包含到下标 j 的元素。
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+}
+</code></pre>
+<h4 id="代码-41"><a href="#代码-41" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    public int subarraySum(int[] nums, int k) {
+        Map&lt;Integer, Integer&gt; pre = new HashMap&lt;&gt;();
+        pre.put(0, 1);                         // 空前缀和出现 1 次
+        int sum = 0, count = 0;
+
+        for (int num : nums) {
+            sum += num;                                   // 当前前缀和
+            count += pre.getOrDefault(sum - k, 0);        // 统计差值为 k 的个数
+            pre.put(sum, pre.getOrDefault(sum, 0) + 1);   // 记录当前前缀和
+        }
+        return count;
+    }
+}
+</code></pre>
+<h4 id="复杂度-40"><a href="#复杂度-40" class="headerlink" title="复杂度"></a>复杂度</h4><ul>
+<li><strong>时间</strong>：O(n) —— 单次遍历。  </li>
+<li><strong>空间</strong>：O(n) —— 哈希表最坏存 n 个不同前缀和。</li>
+</ul>
+<h4 id="易错点-40"><a href="#易错点-40" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确做法</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>未初始化 <code>pre.put(0, 1)</code></td>
+<td>空区间前缀和为 0 出现 1 次</td>
+<td>否则漏掉从首元素开始的子数组</td>
+</tr>
+<tr>
+<td>先累加 <code>count</code> 再更新 <code>pre</code></td>
+<td>顺序正确即可</td>
+<td>先查旧值，再存新值</td>
+</tr>
+<tr>
+<td>使用数组而非哈希表</td>
+<td>若数据范围小可用数组，但哈希表更通用</td>
+<td>范围大时哈希表更省空间</td>
+</tr>
+<tr>
+<td>忘记处理负数或 0</td>
+<td>无需特殊处理，前缀和算法天然支持</td>
+<td>负数、0、正数均可</td>
+</tr>
+</tbody></table>
+<h3 id="239《滑动窗口最大值》"><a href="#239《滑动窗口最大值》" class="headerlink" title="239《滑动窗口最大值》"></a>239《滑动窗口最大值》</h3><h4 id="思路-42"><a href="#思路-42" class="headerlink" title="思路"></a>思路</h4><ul>
+<li><strong>单调双端队列</strong>：<br>• 队列 <code>deque</code> 保存<strong>窗口内可能成为最大值的下标</strong>，且对应值<strong>单调递减</strong>。  </li>
+<li><strong>滑动窗口五连击</strong>（每步都在 O(1)）：  <ol>
+<li><strong>移除过期</strong>：队首下标若已滑出窗口左边界，则出队。  </li>
+<li><strong>维护单调</strong>：从队尾弹出所有小于当前值的元素。  </li>
+<li><strong>入队</strong>：把当前下标加入队尾。  </li>
+<li><strong>记录答案</strong>：当窗口长度达到 <code>k</code> 时，队首即为当前窗口最大值，写结果。  </li>
+</ol>
+</li>
+</ul>
+<h4 id="代码-42"><a href="#代码-42" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    public int[] maxSlidingWindow(int[] nums, int k) {
+        if (nums == null || nums.length == 0) return new int[0];
+
+        Deque&lt;Integer&gt; deque = new LinkedList&lt;&gt;();
+        int n = nums.length;
+        int[] res = new int[n - k + 1];
+
+        for (int i = 0; i &lt; n; i++) {
+            // 1. 移除已滑出窗口的过期下标
+            if (!deque.isEmpty() &amp;&amp; deque.peek() &lt; i - k + 1) {
+                deque.pollFirst();
+            }
+
+            // 2. 保持单调递减：队尾比当前值小的全部弹出
+            while (!deque.isEmpty() &amp;&amp; nums[deque.peekLast()] &lt; nums[i]) {
+                deque.pollLast();
+            }
+
+            // 3. 当前下标入队
+            deque.offerLast(i);
+
+            // 4. 窗口形成后，队首即为最大值
+            if (i &gt;= k - 1) {
+                res[i - k + 1] = nums[deque.peekFirst()];
+            }
+        }
+        return res;
+    }
+}
+</code></pre>
+<h4 id="复杂度-41"><a href="#复杂度-41" class="headerlink" title="复杂度"></a>复杂度</h4><ul>
+<li><strong>时间</strong>：O(n)，每个元素最多入队、出队一次。  </li>
+<li><strong>空间</strong>：O(k)，队列最多存储 <code>k</code> 个下标。</li>
+</ul>
+<h4 id="易错点-41"><a href="#易错点-41" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确做法</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>队列只存值不存下标</td>
+<td>必须存<strong>下标</strong>，才能判断窗口边界</td>
+<td>否则无法定位过期元素</td>
+</tr>
+<tr>
+<td>未检查队首是否过期</td>
+<td>每次循环先 <code>peek() &lt; i-k+1</code> 再移除</td>
+<td>避免旧值干扰</td>
+</tr>
+<tr>
+<td>维护单调时误用 <code>pollFirst()</code></td>
+<td>应从<strong>队尾</strong>弹出</td>
+<td>保持单调递减</td>
+</tr>
+<tr>
+<td>结果数组长度写错</td>
+<td><code>n-k+1</code></td>
+<td>窗口数量为 <code>n-k+1</code></td>
+</tr>
+<tr>
+<td>队首取值用 <code>poll()</code></td>
+<td>用 <code>peekFirst()</code> 只读不移除</td>
+<td>避免破坏队列结构</td>
+</tr>
+</tbody></table>
+<h3 id="76《最小覆盖子串》"><a href="#76《最小覆盖子串》" class="headerlink" title="76《最小覆盖子串》"></a>76《最小覆盖子串》</h3><h4 id="思路-43"><a href="#思路-43" class="headerlink" title="思路"></a>思路</h4><ul>
+<li><strong>滑动窗口 + 固定字符频次</strong><br>• 用两个长度 128 的数组 <code>sCount</code>、<code>tCount</code> 分别统计<strong>窗口内</strong>和<strong>目标串 t</strong> 的字符出现次数。<br>• <code>isCovered</code> 判断当前窗口是否已满足 <strong>每种字符频次 ≥ t 的需求</strong>。  </li>
+<li><strong>滑动窗口三步骤</strong>：  <ol>
+<li>右指针扩张窗口，把字符加入 <code>sCount</code>。  </li>
+<li>当窗口满足条件时，尝试左指针收缩，更新最短子串。  </li>
+<li>左指针移动时，把移出的字符频次减回，并重新检查是否仍满足条件。  </li>
+</ol>
+</li>
+<li>若遍历完仍无满足条件的窗口，返回空串。</li>
+</ul>
+<h4 id="代码-43"><a href="#代码-43" class="headerlink" title="代码"></a>代码</h4><pre><code class="line-numbers language-java">class Solution {
+    public String minWindow(String s, String t) {
+        int[] sCount = new int[128];
+        int[] tCount = new int[128];
+        int m = s.length(), n = t.length();
+        if (m &lt; n) return "";
+
+        /* 1. 统计 t 的字符需求 */
+        for (char c : t.toCharArray()) tCount[c]++;
+
+        int left = 0;
+        int ansLeft = -1, ansRight = m;
+
+        /* 2. 滑动窗口 */
+        for (int right = 0; right &lt; m; right++) {
+            sCount[s.charAt(right)]++;          // 右端字符入窗
+
+            while (isCovered(sCount, tCount)) { // 窗口满足条件
+                if (right - left &lt; ansRight - ansLeft) {
+                    ansLeft = left;
+                    ansRight = right;
+                }
+                sCount[s.charAt(left)]--;       // 左端字符出窗
+                left++;
+            }
+        }
+
+        /* 3. 返回结果 */
+        return ansLeft == -1 ? "" : s.substring(ansLeft, ansRight + 1);
+    }
+
+    /* 判断窗口是否满足 t 的字符需求 */
+    private boolean isCovered(int[] cntS, int[] cntT) {
+        for (int i = 0; i &lt; 128; i++) {
+            if (cntS[i] &lt; cntT[i]) return false;
+        }
+        return true;
+    }
+}
+</code></pre>
+<h4 id="复杂度-42"><a href="#复杂度-42" class="headerlink" title="复杂度"></a>复杂度</h4><ul>
+<li><strong>时间</strong>：O(|s| + |t|)<br>每个字符最多入窗、出窗各一次；<code>isCovered</code> 遍历固定 128 次视为常数。  </li>
+<li><strong>空间</strong>：O(1)<br>仅用两个长度 128 的计数数组。</li>
+</ul>
+<h4 id="易错点-42"><a href="#易错点-42" class="headerlink" title="易错点"></a>易错点</h4><table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>正确做法</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>未初始化 <code>ansLeft = -1</code></td>
+<td>用于判断是否有解</td>
+<td>无解返回空串</td>
+</tr>
+<tr>
+<td>未处理大小写或字符集</td>
+<td><code>cnt[128]</code> 覆盖 ASCII</td>
+<td>也可改成 256</td>
+</tr>
+<tr>
+<td><code>isCovered</code> 遍历范围写错</td>
+<td>从 0 到 127 统一判断</td>
+<td>避免漏掉符号或数字</td>
+</tr>
+<tr>
+<td>返回子串时越界</td>
+<td><code>ansLeft == -1 ? "" : s.substring(...)</code></td>
+<td>防止 <code>substring(-1, ...)</code></td>
+</tr>
+</tbody></table>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>技术</category>
+      </categories>
+      <tags>
+        <tag>LeetCode</tag>
+        <tag>数据结构，算法</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Google AI Studio部署自己的应用</title>
+    <url>/2026/01/05/Gemini%E7%94%9F%E6%88%90%E5%B9%B6%E9%83%A8%E7%BD%B2%E8%87%AA%E5%B7%B1%E7%9A%84%E5%BA%94%E7%94%A8/</url>
+    <content><![CDATA[<h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><blockquote>
+<p>最近刷到很多用Google AI Studio生成各种好玩的应用的视频，不过这些应用都是依托于AI Studio上运行的，使用起来很不方便，所以就在想能不能将AI Studio生成的应用部署到网站上，更加方便的进行访问。本文主要介绍一下相关的部署方式和自己用的比较舒服的一套开发和部署流程。</p>
+</blockquote>
+<h2 id="部署方式"><a href="#部署方式" class="headerlink" title="部署方式"></a>部署方式</h2><p>在B站上找到一个相关的视频看了一下，说的还是比较全面的，可以参考这个视频中的方式进行部署。</p>
+<p><a href="https://www.bilibili.com/video/BV1mcSMBtEkR/?spm_id_from=333.337.search-card.all.click&amp;vd_source=3d6f8c0411732bf46c8dda7d2d09a422">把Gemini3生成的应用，免费部署成自己的网站，别只会在AI Studio里玩了_哔哩哔哩_bilibili</a></p>
+<p>四种部署方式对比：</p>
+<table>
+<thead>
+<tr>
+<th align="left">部署平台</th>
+<th align="left">主要特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><a href="https://vercel.com/">Vercel</a></td>
+<td align="left">默认域名国内无法直连，可绑定自定义域名解决<br>自动识别框架，部署简单，免费额度充足</td>
+</tr>
+<tr>
+<td align="left"><a href="https://app.netlify.com/">Netlify</a></td>
+<td align="left">操作与Vercel类似，域名国内可用<br>免费额度有限</td>
+</tr>
+<tr>
+<td align="left"><a href="https://pages.edgeone.ai/zh">腾讯EdgeOne Pages</a></td>
+<td align="left">国内平台，访问速度较快<br>完全免费</td>
+</tr>
+<tr>
+<td align="left"><a href="https://console.cloud.google.com/">谷歌云</a></td>
+<td align="left">需要绑定信用卡和结算信息<br>自动保护API Key，通过网关代理请求</td>
+</tr>
+</tbody></table>
+<h2 id="不同应用"><a href="#不同应用" class="headerlink" title="不同应用"></a>不同应用</h2><h3 id="无AI功能的纯前端应用"><a href="#无AI功能的纯前端应用" class="headerlink" title="无AI功能的纯前端应用"></a><strong>无AI功能的纯前端应用</strong></h3><p><strong>特点：</strong> 静态网页，不需要API调用 </p>
+<p><strong>部署步骤：</strong></p>
+<ol>
+<li>在Google AI Studio生成应用</li>
+<li>点击”保存到GitHub”</li>
+<li>选择任一平台（Vercel/Netlify/EdgeOne）</li>
+<li>一键部署完成</li>
+</ol>
+<h3 id="有AI功能的应用"><a href="#有AI功能的应用" class="headerlink" title="有AI功能的应用"></a><strong>有AI功能的应用</strong></h3><p><strong>特点：</strong> 需要调用Gemini API，必须保护API Key</p>
+<h4 id="方案1：谷歌云部署"><a href="#方案1：谷歌云部署" class="headerlink" title="方案1：谷歌云部署"></a><strong>方案1：谷歌云部署</strong></h4><ul>
+<li>使用Google AI Studio的”部署应用”功能</li>
+<li>自动创建API代理，保护API Key</li>
+<li>通过谷歌网关转发请求，前端看不到Key</li>
+</ul>
+<p>缺点是似乎只有Gemini模型可以，如果用qwen或者deepssek这样的就不太行</p>
+<h4 id="方案2：改造为全栈应用"><a href="#方案2：改造为全栈应用" class="headerlink" title="方案2：改造为全栈应用"></a><strong>方案2：改造为全栈应用</strong></h4><p><strong>技术栈：</strong> Next.js + 前端后端分离 <strong>核心思路：</strong></p>
+<ul>
+<li>前端 → 调用后端API</li>
+<li>后端 → 保存真实API Key并调用Gemini</li>
+<li>部署到支持后端的平台（Vercel/Netlify/EdgeOnel）</li>
+</ul>
+<p>这个方案的话比较通用，支持任意的模型</p>
+<p><strong>改造步骤：</strong></p>
+<ol>
+<li>使用AI编程工具（如Codex）将纯前端项目改造为Next.js全栈项目</li>
+<li>API Key存放在后端环境变量中</li>
+<li>前端通过<code>/api/generate</code>等接口调用后端</li>
+<li>部署时在后端配置真实API Key</li>
+</ol>
+<h2 id="开发和部署流程"><a href="#开发和部署流程" class="headerlink" title="开发和部署流程"></a>开发和部署流程</h2><p>自己最近结合网上教程和自己摸索基本确立了一套比较舒服的开发部署流程，在此记录一下。</p>
+<h3 id="开发"><a href="#开发" class="headerlink" title="开发"></a>开发</h3><p>首先是通过Ai Studio开发一个应用的初版，然后上传到github</p>
+<p><img src="https://typics.oss-cn-hangzhou.aliyuncs.com/img/image-20260102192941931.png" alt="image-20260102192941931"></p>
+<p>接下来我们可以在Ai Studio中逐步优化，也可以选择通过CURSOR去进行后续的修改，我们打开CURSOR，然后选择clone repo，登录一下我们的Github即可。（最近也在尝试VScode中集成codeX去进行开发，都可以，看个人喜好）</p>
+<p><img src="https://typics.oss-cn-hangzhou.aliyuncs.com/img/image-20260102193334341.png" alt="image-20260102193334341"></p>
+<p><img src="https://typics.oss-cn-hangzhou.aliyuncs.com/img/image-20260102193437149.png" alt="image-20260102193437149"></p>
+<p>把GitHub上的项目拉取下来之后就可以进行修改了（当然，其实也可以跳过Ai Studio，直接在CURSOR中写初始代码，然后上传Github等）</p>
+<p><img src="https://typics.oss-cn-hangzhou.aliyuncs.com/img/image-20260102193718132.png" alt="image-20260102193718132"></p>
+<p>然后通过CURSOR可以进行一些修改和开发，修改之后预览效果可以在终端（快捷键Ctrl+J）中通过以下命令运行预览效果：</p>
+<pre><code class="line-numbers language-bash">nmp install
+npm run dev
+</code></pre>
+<p>当效果满意之后可以提交到github中（让cursor帮忙完成就行），如果手动的话可以使用下面的命令</p>
+<ol>
+<li>初次配置 (仅需一次)</li>
+</ol>
+<ul>
+<li><strong>切换协议</strong>：<code>git remote set-url origin git@github.com:用户名/仓库名.git</code><ul>
+<li><em>作用：将 HTTPS 切换为 SSH 免密模式。</em></li>
+</ul>
+</li>
+<li><strong>确认状态</strong>：<code>git remote -v</code><ul>
+<li><em>作用：检查远端地址是否已更正。</em></li>
+</ul>
+</li>
+</ul>
+<ol start="2">
+<li>日常循环 (常用命令)</li>
+</ol>
+<ul>
+<li><strong>查状态</strong>：<code>git status</code><ul>
+<li><em>作用：确认改动了哪些文件。</em></li>
+</ul>
+</li>
+<li><strong>存入暂存区</strong>：<code>git add .</code><ul>
+<li><em>作用：标记所有改动准备提交。</em></li>
+</ul>
+</li>
+<li><strong>提交本地</strong>：<code>git commit -m "说明文字"</code><ul>
+<li><em>作用：保存改动快照到本地仓库。</em></li>
+</ul>
+</li>
+<li><strong>推送到远端</strong>：<code>git push origin main</code><ul>
+<li><em>作用：将本地改动同步到 GitHub。</em></li>
+</ul>
+</li>
+</ul>
+<p>此处分享一个最近看到的一个比较适合入门的Git教程（感觉Git还是比较重要的一个东西）</p>
+<p><a href="https://www.bilibili.com/video/BV1Hkr7YYEh8/?spm_id_from=333.1007.top_right_bar_window_history.content.click&amp;vd_source=3d6f8c0411732bf46c8dda7d2d09a422">给傻子的Git教程_哔哩哔哩_bilibili</a></p>
+<h3 id="部署"><a href="#部署" class="headerlink" title="部署"></a>部署</h3><p>之前一直用Netify进行部署，主要他能够生成一个直接访问的URL，但是免费额度有限，于是转而使用EdgeOne。</p>
+<h4 id="常规部署"><a href="#常规部署" class="headerlink" title="常规部署"></a>常规部署</h4><p>EdgeOne中只需要选择对应的Git仓库就行，然后填写项目名，分支这些信息。如果是需要用到API KEY的应用，那么可以在环境变量的地方指定。</p>
+<p><img src="https://typics.oss-cn-hangzhou.aliyuncs.com/img/image-20260102194722981.png" alt="image-20260102194722981"></p>
+<p><img src="https://typics.oss-cn-hangzhou.aliyuncs.com/img/image-20260102194916635.png" alt="image-20260102194916635"></p>
+<p>部署成功之后就可以进行预览了，如果不配置自定义域名的话链接是3h有效，所以尽量还是配置自定义域名（前提是需要有一个备案好的域名）。下面会介绍如何配置自定义域名。</p>
+<p><img src="https://typics.oss-cn-hangzhou.aliyuncs.com/img/image-20260102195100636.png" alt="image-20260102195100636"></p>
+<h4 id="EdgeOne绑定自己的域名"><a href="#EdgeOne绑定自己的域名" class="headerlink" title="EdgeOne绑定自己的域名"></a>EdgeOne绑定自己的域名</h4><p>参考腾讯官方文档：<a href="https://edgeone.cloud.tencent.com/pages/document/175191809682923520">自定义域名</a></p>
+<p>点击添加自定义域名</p>
+<p><img src="https://typics.oss-cn-hangzhou.aliyuncs.com/img/image-20260102153417612.png" alt="image-20260102153417612"></p>
+<p>需要到域名解析服务商那里添加解析记录，我用的是阿里云的域名，所以去阿里云控制台进行操作</p>
+<p><img src="https://typics.oss-cn-hangzhou.aliyuncs.com/img/image-20260102153449946.png" alt="image-20260102153449946"></p>
+<p>点击添加解析</p>
+<p><img src="https://typics.oss-cn-hangzhou.aliyuncs.com/img/image-20260102153653214.png" alt="image-20260102153653214"></p>
+<p>然后按照之前的提示把相关信息填写好就行</p>
+<p><img src="https://typics.oss-cn-hangzhou.aliyuncs.com/img/image-20260102154356618.png" alt="image-20260102154356618"></p>
+<p>此时我们再点击验证就可以验证成功了</p>
+<p><img src="https://typics.oss-cn-hangzhou.aliyuncs.com/img/image-20260102154413204.png" alt="image-20260102154413204"></p>
+<p>但是此时访问<a href="http://www.salary.kongcm.cn/">www.salary.kongcm.cn</a> 发现访问不了，报502了，说明服务器端有问题</p>
+<p><img src="https://typics.oss-cn-hangzhou.aliyuncs.com/img/image-20260102154552471.png" alt="image-20260102154552471"></p>
+<p>我们回到edgeone，发现还需要添加CNAME</p>
+<p><img src="https://typics.oss-cn-hangzhou.aliyuncs.com/img/image-20260102154529246.png" alt="image-20260102154529246"></p>
+<p>回到阿里云控制台再添加一条CNAME解析</p>
+<p><img src="https://typics.oss-cn-hangzhou.aliyuncs.com/img/image-20260102154729180.png" alt="image-20260102154729180"></p>
+<p>稍等一会这边的状态就变成了已生效</p>
+<p><img src="https://typics.oss-cn-hangzhou.aliyuncs.com/img/image-20260102154816176.png" alt="image-20260102154816176"></p>
+<p>此时再尝试访问，我发现还是访问不了（是因为开了代理，把代理关闭就可以正常访问了）</p>
+<p><img src="https://typics.oss-cn-hangzhou.aliyuncs.com/img/image-20260102154837838.png" alt="image-20260102154837838"></p>
+<p>关闭代理可以正常访问，但是会提醒不安全，因为我们的网站并没有SSL证书。Edgeone也帮我们考虑了这一点，可以参考：<a href="https://edgeone.cloud.tencent.com/pages/document/194029924094443520">申请免费证书</a></p>
+<p><img src="https://typics.oss-cn-hangzhou.aliyuncs.com/img/image-20260102155506424.png" alt="image-20260102155506424"></p>
+<p>我们点击HTTPS配置那里的配置（我这张图是配置好的，没配置的话这里应该显示不太一样）</p>
+<p><img src="https://typics.oss-cn-hangzhou.aliyuncs.com/img/image-20260102200108419.png" alt="image-20260102200108419"></p>
+<p>然后选择申请免费证书，选自动验证</p>
+<p><img src="https://typics.oss-cn-hangzhou.aliyuncs.com/img/image-20260102155248043.png" alt="image-20260102155248043"></p>
+<p>因为我们之前已经配置过CNAME解析了，这里只需要等待一会儿就OK了，我们可以看到显示已部署，然后把强制HTTPS打开，大功告成。</p>
+<p><img src="https://typics.oss-cn-hangzhou.aliyuncs.com/img/image-20260102155635232.png" alt="image-20260102155635232"></p>
+<p>我们再次尝试访问，发现没有再提醒不安全了。</p>
+<p><img src="https://typics.oss-cn-hangzhou.aliyuncs.com/img/image-20260102155904982.png" alt="image-20260102155904982"></p>
+<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p>以上就是自己最近对于Gemini Ai Studio开发部署应用的一些探索，其实并不算复杂，只是网上目前的资料比较琐碎，所以在这里进行一些整理。</p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>技术</category>
+      </categories>
+      <tags>
+        <tag>Gemini</tag>
+        <tag>Github</tag>
+        <tag>EdgeOne，CURSOR</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>新电脑迁移hexo</title>
+    <url>/2025/07/16/%E6%96%B0%E7%94%B5%E8%84%91%E8%BF%81%E7%A7%BBhexo/</url>
+    <content><![CDATA[<h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>换电脑有段时间了，但是一直没有将hexo博客给迁移到新电脑上，最近研究了一下如何迁移，在这里做一个记录，也作为迁移后的第一篇博客</p>
+<p>主要参考下面这篇文章进行：</p>
+<p><a href="https://blog.csdn.net/qq_36667170/article/details/118163563">换电脑后怎么迁移hexo博客？_hexo换电脑了怎么办-CSDN博客</a></p>
+<h3 id="遇到的问题"><a href="#遇到的问题" class="headerlink" title="遇到的问题"></a>遇到的问题</h3><p>1.<code>git bash here</code>卡死</p>
+<p>尝试过重装、降低git版本、装在C盘等方法都没有解决，后面直接用<code>cmd</code>执行相关命令</p>
+<p><img src="https://typics.oss-cn-hangzhou.aliyuncs.com/img/image-20250712224330583.png" alt="image-20250712224330583"></p>
+<p>2.Typora配置阿里云OSS存储权限问题</p>
+<p>参考<a href="https://blog.csdn.net/mayuxin1314/article/details/125911299">Typora+阿里云OSS实现图片自动上传（不需要安装软件）_typora oss-CSDN博客</a></p>
+<p>不过需要注意创建RAM用户后需要为用户分配相应的权限，例如<code>AliyunOSSFullAccess</code>，否则测试上传的实现会报错权限问题。</p>
+<h3 id="待解决的问题"><a href="#待解决的问题" class="headerlink" title="待解决的问题"></a>待解决的问题</h3><p>1.深入学习一下git，后续应该是可以通过git在不同的电脑上进行提交</p>
+<p>2.git bash here卡死问题</p>
+<h3 id="更新"><a href="#更新" class="headerlink" title="更新"></a>更新</h3><p>最近在折腾博客的时候cursor误删了hexo本地文件夹，我想着GitHub上反正有备份，应该没有问题，结果clone下来一看和hexo本地文件夹并不太一样，还好之前U盘里有老的备份。</p>
+<p>其实，Github上存的只是生成后的静态文件，其实是源码文件夹下的public文件夹的内容</p>
+<pre><code>index.html
+css/
+js/
+images/
+</code></pre>
+<p>没有 <code>source/ themes/ package.json</code></p>
+<p>所以没办法<code>hexo s</code></p>
+<p>所以为了以后换电脑之后更好备份，也为了多台电脑之间可以协作，可以再创建一个仓库存储源码</p>
+<p>仓库 1：<code>blog-source</code>（存 Hexo 源码，纯存档/协作）</p>
+<p>仓库 2：现在这个（存部署产物，给 GitHub Pages 用）</p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>技术</category>
+      </categories>
+      <tags>
+        <tag>Git</tag>
+        <tag>hexo</tag>
+      </tags>
+  </entry>
 </search>
