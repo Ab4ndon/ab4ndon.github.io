@@ -469,28 +469,7 @@
 
                         </div><span id="jinrishici-sentence">正在加载今日诗词....</span>
                         </div> -->
-                        <div class="poem-wrap">
-                            <div class="poem-border poem-left"></div>
-                            <div class="poem-border poem-right"></div>
-                              <h1>念两句诗</h1>
-                              <p id="poem">挑选中...</p>
-                              <p id="info">
-                          
-                            <script src="https://sdk.jinrishici.com/v2/browser/jinrishici.js" charset="utf-8" defer></script>
-                            <script type="text/javascript">
-                              window.addEventListener('load', function () {
-                                if (!window.jinrishici) {
-                                  return;
-                                }
-                                jinrishici.load(function(result) {
-                                  poem.innerHTML = result.data.content
-                                  info.innerHTML = '【' + result.data.origin.dynasty + '】' + result.data.origin.author + '《' + result.data.origin.title + '》'
-                                  document.getElementById("poem").value(poem);
-                                  document.getElementById("info").value(info);  
-                                });
-                              });
-                            </script>
-                          </div>
+                        
                           
   
                     
