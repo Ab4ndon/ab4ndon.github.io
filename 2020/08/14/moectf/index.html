@@ -313,7 +313,8 @@
 
     .toc-widget .toc-title {
         margin: 35px 0 15px 0;
-        padding-left: 17px;
+        padding: 0;
+        text-align: center;
         font-size: 1.5rem;
         font-weight: bold;
         line-height: 1.5rem;
@@ -354,6 +355,15 @@
 
     #toc-content .is-active-link {
         color: #42b983;
+    }
+    
+    /* 强制展开所有目录项 */
+    #toc-content .is-collapsed {
+        max-height: 1000px !important;
+    }
+    
+    #toc-content .is-collapsible {
+        max-height: 1000px !important;
     }
 
     #floating-toc-btn {
@@ -1295,8 +1305,8 @@ if (isset($a) &amp;&amp; !is_numeric($a) &amp;&amp; $a == 114514) {
 
 
     </div>
-    <div id="toc-aside" class="expanded col l3 hide-on-med-and-down">
-        <div class="toc-widget">
+    <div id="toc-aside" class="expanded col l3 hide-on-med-and-down" style="padding-right: 0;">
+        <div class="toc-widget" style="margin-left: auto; margin-right: 0;">
             <div class="toc-title"><i class="far fa-list-alt"></i>&nbsp;&nbsp;目录</div>
             <div id="toc-content"></div>
         </div>
@@ -1319,9 +1329,15 @@ if (isset($a) &amp;&amp; !is_numeric($a) &amp;&amp; $a == 114514) {
             tocSelector: '#toc-content',
             contentSelector: '#articleContent',
             headingsOffset: -($(window).height() * 0.4 - 45),
-            collapseDepth: Number('2'),
+            collapseDepth: Number('0'),
             headingSelector: 'h1, h2, h3, h4, h5, h6'
         });
+        
+        // 强制展开所有目录项
+        setTimeout(function() {
+            $('#toc-content .is-collapsed').removeClass('is-collapsed').addClass('is-collapsible');
+            $('#toc-content .is-collapsible').css('max-height', '1000px');
+        }, 100);
 
         // modify the toc link href to support Chinese.
         let i = 0;

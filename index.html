@@ -439,9 +439,11 @@
     <div id="indexCard" class="index-card">
         <div class="container ">
             <div class="card">
+                <!-- 完全注释掉空的card-content框以避免布局问题 -->
+                <!--
                 <div class="card-content">
-                    <!--  -->
-                        <!-- <div class="dream">
+                    
+                        <div class="dream">
     
     <div class="title center-align">
         <i class="far fa-lightbulb"></i>&nbsp;&nbsp;公告栏
@@ -453,41 +455,10 @@
         </div>
     </div>
 </div>
- -->
-                        <!-- <div class="center">
 
+                        <div class="center">
                         </div><span id="jinrishici-sentence">正在加载今日诗词....</span>
-                        </div> -->
-                        <div class="poem-wrap">
-                            <div class="poem-border poem-left"></div>
-                            <div class="poem-border poem-right"></div>
-                              <h1>念两句诗</h1>
-                              <p id="poem">挑选中...</p>
-                              <p id="info">
-                          
-                            <!-- 延迟加载诗词API以提升首页加载速度 -->
-                            <script>
-                              // 延迟加载诗词API
-                              setTimeout(function() {
-                                var script = document.createElement('script');
-                                script.src = 'https://sdk.jinrishici.com/v2/browser/jinrishici.js';
-                                script.charset = 'utf-8';
-                                script.onload = function() {
-                                  jinrishici.load(function(result) {
-                                    var poemEl = document.getElementById('poem');
-                                    var infoEl = document.getElementById('info');
-                                    if (poemEl && infoEl) {
-                                      poemEl.innerHTML = result.data.content;
-                                      infoEl.innerHTML = '【' + result.data.origin.dynasty + '】' + result.data.origin.author + '《' + result.data.origin.title + '》';
-                                    }
-                                  });
-                                };
-                                document.head.appendChild(script);
-                              }, 2000); // 延迟2秒加载
-                            </script>
-                          </div>
-                          
-  
+                        </div>
                     
 
                     
@@ -496,6 +467,7 @@
 
                     
                 </div>
+                -->
             </div>
         </div>
     </div>
@@ -515,7 +487,7 @@
                             
                             <img src="/medias/featureimages/10.jpg" class="responsive-img" alt="Google AI Studio部署自己的应用">
                             
-                            <span class="card-title">Google AI Studio部署自己的应用</span>
+                            <span class="card-title"><strong>Google AI Studio部署自己的应用</strong></span>
                         </div>
                     </a>
 
@@ -567,10 +539,9 @@
                     <a href="/2025/12/05/AI-summary/">
                         <div class="card-image">
                             
+                            <img src="/medias/featureimages/12.jpg" class="responsive-img" alt="hexo 添加AI摘要功能">
                             
-                            <img src="/medias/featureimages/38.jpg" class="responsive-img" alt="hexo 添加AI摘要功能">
-                            
-                            <span class="card-title">hexo 添加AI摘要功能</span>
+                            <span class="card-title"><strong>hexo 添加AI摘要功能</strong></span>
                         </div>
                     </a>
 
@@ -633,7 +604,7 @@
                             
                             <img src="/medias/featureimages/43.jpg" class="responsive-img" alt="LeetCode刷题记录">
                             
-                            <span class="card-title">LeetCode刷题记录</span>
+                            <span class="card-title"><strong>LeetCode刷题记录</strong></span>
                         </div>
                     </a>
 
@@ -684,7 +655,7 @@
                             
                             <img src="/medias/featureimages/46.jpg" class="responsive-img" alt="新电脑迁移hexo">
                             
-                            <span class="card-title">新电脑迁移hexo</span>
+                            <span class="card-title"><strong>新电脑迁移hexo</strong></span>
                         </div>
                     </a>
 
@@ -735,7 +706,7 @@
                             
                             <img src="/medias/featureimages/29.jpg" class="responsive-img" alt="Vscode_Error">
                             
-                            <span class="card-title">Vscode_Error</span>
+                            <span class="card-title"><strong>Vscode_Error</strong></span>
                         </div>
                     </a>
 
@@ -786,7 +757,7 @@
                             
                             <img src="/medias/featureimages/8.jpg" class="responsive-img" alt="ROBOCUP RESCUE 示例代码演示">
                             
-                            <span class="card-title">ROBOCUP RESCUE 示例代码演示</span>
+                            <span class="card-title"><strong>ROBOCUP RESCUE 示例代码演示</strong></span>
                         </div>
                     </a>
 
@@ -836,7 +807,7 @@
                             
                             <img src="/medias/featureimages/14.jpg" class="responsive-img" alt="【NJUPT】微机实验（合集）">
                             
-                            <span class="card-title">【NJUPT】微机实验（合集）</span>
+                            <span class="card-title"><strong>【NJUPT】微机实验（合集）</strong></span>
                         </div>
                     </a>
 
@@ -898,7 +869,7 @@
                             
                             <img src="/medias/featureimages/10.jpg" class="responsive-img" alt="【NJUPT】数据结构实验(合集)">
                             
-                            <span class="card-title">【NJUPT】数据结构实验(合集)</span>
+                            <span class="card-title"><strong>【NJUPT】数据结构实验(合集)</strong></span>
                         </div>
                     </a>
 
@@ -956,7 +927,7 @@
                             
                             <img src="/medias/featureimages/13.jpg" class="responsive-img" alt="【NJUPT】 算法实验（合集）">
                             
-                            <span class="card-title">【NJUPT】 算法实验（合集）</span>
+                            <span class="card-title"><strong>【NJUPT】 算法实验（合集）</strong></span>
                         </div>
                     </a>
 
@@ -992,52 +963,6 @@
                         
                         <a href="/tags/%E7%AE%97%E6%B3%95%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%88%86%E6%9E%90/">
                             <span class="chip bg-color">算法设计与分析</span>
-                        </a>
-                        
-                    </div>
-                    
-                </div>
-            </div>
-            
-            <div class="article col s12 m6 l4" data-aos="zoom-in">
-                <div class="card">
-                    <a href="/2021/03/17/Android/">
-                        <div class="card-image">
-                            
-                            <img src="/medias/featureimages/43.jpg" class="responsive-img" alt="Android">
-                            
-                            <span class="card-title">Android</span>
-                        </div>
-                    </a>
-
-                    <div class="card-content article-content">
-                        <div class="summary block-with-text">
-                            
-                                今天做了几个简单页面的布局设计，学到了一些新的东西
-                            
-                        </div>
-                        <div class="publish-info">
-                            <span class="publish-date">
-                                <i class="far fa-clock fa-fw icon-date"></i>2021-03-17
-                            </span>
-                            <span class="publish-author">
-                                
-                                <i class="fas fa-bookmark fa-fw icon-category"></i>
-                                
-                                <a href="/categories/%E6%8A%80%E6%9C%AF%E5%AD%A6%E4%B9%A0/" class="post-category">
-                                    技术学习
-                                </a>
-                                
-                                
-                            </span>
-                        </div>
-                    </div>
-
-                    
-                    <div class="card-action article-tags">
-                        
-                        <a href="/tags/Android-UI/">
-                            <span class="chip bg-color">Android UI</span>
                         </a>
                         
                     </div>
