@@ -31,9 +31,10 @@
     <link rel="stylesheet" href="/js/prism/prism.css">
 
 
-    <script src="https://v1.hitokoto.cn/?c=d&encode=js&select=%23hitokoto" defer></script>
+    <!-- 已禁用 hitokoto API 以提升加载速度 -->
+    <!-- <script src="https://v1.hitokoto.cn/?c=d&encode=js&select=%23hitokoto" defer></script> -->
 
-<meta name="generator" content="Hexo 5.4.0"><!-- hexo-inject:begin --><!-- hexo-inject:end --><link rel="alternate" href="/atom.xml" title="Ab4nd0n" type="application/atom+xml">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="Ab4nd0n" type="application/atom+xml"><!-- hexo-inject:begin --><!-- hexo-inject:end -->
 </head>
 
 
@@ -308,18 +309,8 @@
 
             <div class="description center-align">
                 
-                <span id="subtitle"></span>
-                <script src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11"></script>
-                <script>
-                    var typed = new Typed("#subtitle", {
-                        strings: ['从来没有真正的绝境, 只有心灵的迷途','Never really desperate, only the lost of the soul'],
-                        startDelay: 300,
-                        typeSpeed: 100,
-                        loop: true,
-                        backSpeed: 50,
-                        showCursor: true
-                    });
-                </script>
+                    记录学习，记录生活。
+                   
                 
             </div>
         </div>
@@ -474,14 +465,25 @@
                               <p id="poem">挑选中...</p>
                               <p id="info">
                           
-                            <script src="https://sdk.jinrishici.com/v2/browser/jinrishici.js" charset="utf-8"></script>
-                            <script type="text/javascript">
-                              jinrishici.load(function(result) {
-                                poem.innerHTML = result.data.content
-                                info.innerHTML = '【' + result.data.origin.dynasty + '】' + result.data.origin.author + '《' + result.data.origin.title + '》'
-                                document.getElementById("poem").value(poem);
-                                document.getElementById("info").value(info);  
-                            });
+                            <!-- 延迟加载诗词API以提升首页加载速度 -->
+                            <script>
+                              // 延迟加载诗词API
+                              setTimeout(function() {
+                                var script = document.createElement('script');
+                                script.src = 'https://sdk.jinrishici.com/v2/browser/jinrishici.js';
+                                script.charset = 'utf-8';
+                                script.onload = function() {
+                                  jinrishici.load(function(result) {
+                                    var poemEl = document.getElementById('poem');
+                                    var infoEl = document.getElementById('info');
+                                    if (poemEl && infoEl) {
+                                      poemEl.innerHTML = result.data.content;
+                                      infoEl.innerHTML = '【' + result.data.origin.dynasty + '】' + result.data.origin.author + '《' + result.data.origin.title + '》';
+                                    }
+                                  });
+                                };
+                                document.head.appendChild(script);
+                              }, 2000); // 延迟2秒加载
                             </script>
                           </div>
                           
@@ -1255,25 +1257,6 @@ $(function () {
     
 
     
-    <script>
-        (function (i, s, o, g, r, a, m) {
-            i["DaoVoiceObject"] = r;
-            i[r] = i[r] || function () {
-                (i[r].q = i[r].q || []).push(arguments)
-            }, i[r].l = 1 * new Date();
-            a = s.createElement(o), m = s.getElementsByTagName(o)[0];
-            a.async = 1;
-            a.src = g;
-            a.charset = "utf-8";
-            m.parentNode.insertBefore(a, m)
-        })(window, document, "script", ('https:' == document.location.protocol ? 'https:' : 'http:') +
-            "//widget.daovoice.io/widget/6984b559.js", "daovoice")
-        daovoice('init', {
-            app_id: "96bb8160"
-        });
-        daovoice('update');
-    </script>
-    
 
     
 
@@ -1281,8 +1264,6 @@ $(function () {
 
     
 
-    
-    <script src="/libs/instantpage/instantpage.js" type="module"></script>
     
 
     <!-- <script type="text/javascript">
