@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://kongcm.cn/"/>
-  <updated>2026-01-09T04:04:45.283Z</updated>
+  <updated>2026-01-09T04:21:40.928Z</updated>
   <id>http://kongcm.cn/</id>
   
   <author>
@@ -21,7 +21,7 @@
     <link href="http://kongcm.cn/2026/01/09/%E9%98%BF%E9%87%8C%E4%BA%91CDN%E5%8A%A0%E9%80%9FHexo%E5%8D%9A%E5%AE%A2/"/>
     <id>http://kongcm.cn/2026/01/09/%E9%98%BF%E9%87%8C%E4%BA%91CDN%E5%8A%A0%E9%80%9FHexo%E5%8D%9A%E5%AE%A2/</id>
     <published>2026-01-09T02:15:02.000Z</published>
-    <updated>2026-01-09T04:04:45.283Z</updated>
+    <updated>2026-01-09T04:21:40.928Z</updated>
     
     <summary type="html">
     
@@ -39,7 +39,11 @@
       <category term="技术" scheme="http://kongcm.cn/categories/%E6%8A%80%E6%9C%AF/"/>
     
     
-      <category term="CDN, Hexo, 自定义域名" scheme="http://kongcm.cn/tags/CDN-Hexo-%E8%87%AA%E5%AE%9A%E4%B9%89%E5%9F%9F%E5%90%8D/"/>
+      <category term="Hexo" scheme="http://kongcm.cn/tags/Hexo/"/>
+    
+      <category term="CDN" scheme="http://kongcm.cn/tags/CDN/"/>
+    
+      <category term="自定义域名" scheme="http://kongcm.cn/tags/%E8%87%AA%E5%AE%9A%E4%B9%89%E5%9F%9F%E5%90%8D/"/>
     
   </entry>
   
