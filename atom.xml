@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
-  <title>Ab4nd0n</title>
+  <title>Ab4nd0n的个人博客</title>
   
   <subtitle>我习于冷，志于成冰</subtitle>
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://kongcm.cn/"/>
-  <updated>2026-01-05T04:26:58.782Z</updated>
+  <updated>2026-01-09T04:04:45.283Z</updated>
   <id>http://kongcm.cn/</id>
   
   <author>
@@ -17,11 +17,38 @@
   <generator uri="https://hexo.io/">Hexo</generator>
   
   <entry>
+    <title>阿里云CDN加速Hexo博客</title>
+    <link href="http://kongcm.cn/2026/01/09/%E9%98%BF%E9%87%8C%E4%BA%91CDN%E5%8A%A0%E9%80%9FHexo%E5%8D%9A%E5%AE%A2/"/>
+    <id>http://kongcm.cn/2026/01/09/%E9%98%BF%E9%87%8C%E4%BA%91CDN%E5%8A%A0%E9%80%9FHexo%E5%8D%9A%E5%AE%A2/</id>
+    <published>2026-01-09T02:15:02.000Z</published>
+    <updated>2026-01-09T04:04:45.283Z</updated>
+    
+    <summary type="html">
+    
+      
+      
+        
+        
+          &lt;p&gt;之前我曾经给自己的博客简单配置过一次 CDN 加速，但当时对 CDN 的工作机制、回源逻辑以及 GitHub Pages 的域名策略理解并不充分，配置也比较“凭感觉”。虽然名义上接入了
+        
+      
+    
+    </summary>
+    
+    
+      <category term="技术" scheme="http://kongcm.cn/categories/%E6%8A%80%E6%9C%AF/"/>
+    
+    
+      <category term="CDN, Hexo, 自定义域名" scheme="http://kongcm.cn/tags/CDN-Hexo-%E8%87%AA%E5%AE%9A%E4%B9%89%E5%9F%9F%E5%90%8D/"/>
+    
+  </entry>
+  
+  <entry>
     <title>Google AI Studio部署自己的应用</title>
     <link href="http://kongcm.cn/2026/01/05/Gemini%E7%94%9F%E6%88%90%E5%B9%B6%E9%83%A8%E7%BD%B2%E8%87%AA%E5%B7%B1%E7%9A%84%E5%BA%94%E7%94%A8/"/>
     <id>http://kongcm.cn/2026/01/05/Gemini%E7%94%9F%E6%88%90%E5%B9%B6%E9%83%A8%E7%BD%B2%E8%87%AA%E5%B7%B1%E7%9A%84%E5%BA%94%E7%94%A8/</id>
     <published>2026-01-05T04:00:30.000Z</published>
-    <updated>2026-01-05T04:26:58.782Z</updated>
+    <updated>2026-01-09T04:10:17.602Z</updated>
     
     <summary type="html">
     
@@ -44,7 +71,9 @@
     
       <category term="Github" scheme="http://kongcm.cn/tags/Github/"/>
     
-      <category term="EdgeOne，CURSOR" scheme="http://kongcm.cn/tags/EdgeOne%EF%BC%8CCURSOR/"/>
+      <category term="EdgeOne" scheme="http://kongcm.cn/tags/EdgeOne/"/>
+    
+      <category term="CURSOR" scheme="http://kongcm.cn/tags/CURSOR/"/>
     
   </entry>
   
@@ -53,7 +82,7 @@
     <link href="http://kongcm.cn/2025/12/05/AI-summary/"/>
     <id>http://kongcm.cn/2025/12/05/AI-summary/</id>
     <published>2025-12-05T03:01:18.000Z</published>
-    <updated>2026-01-06T02:36:15.624Z</updated>
+    <updated>2026-01-09T04:09:18.071Z</updated>
     
     <summary type="html">
     
@@ -148,7 +177,7 @@
     <link href="http://kongcm.cn/2023/08/06/Vscode-Error/"/>
     <id>http://kongcm.cn/2023/08/06/Vscode-Error/</id>
     <published>2023-08-06T07:25:39.000Z</published>
-    <updated>2026-01-05T04:26:02.450Z</updated>
+    <updated>2026-01-09T04:10:17.603Z</updated>
     
     <summary type="html">
     
@@ -164,7 +193,7 @@
     </summary>
     
     
-      <category term="报错处理" scheme="http://kongcm.cn/categories/%E6%8A%A5%E9%94%99%E5%A4%84%E7%90%86/"/>
+      <category term="技术" scheme="http://kongcm.cn/categories/%E6%8A%80%E6%9C%AF/"/>
     
     
       <category term="Vscode" scheme="http://kongcm.cn/tags/Vscode/"/>
@@ -194,12 +223,14 @@
     </summary>
     
     
-      <category term="技术学习" scheme="http://kongcm.cn/categories/%E6%8A%80%E6%9C%AF%E5%AD%A6%E4%B9%A0/"/>
+      <category term="技术" scheme="http://kongcm.cn/categories/%E6%8A%80%E6%9C%AF/"/>
     
     
       <category term="Java" scheme="http://kongcm.cn/tags/Java/"/>
     
       <category term="Linux" scheme="http://kongcm.cn/tags/Linux/"/>
+    
+      <category term="机器人大赛" scheme="http://kongcm.cn/tags/%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%A4%A7%E8%B5%9B/"/>
     
   </entry>
   
@@ -208,7 +239,7 @@
     <link href="http://kongcm.cn/2021/07/09/%E5%BE%AE%E6%9C%BA%E5%AE%9E%E9%AA%8C/"/>
     <id>http://kongcm.cn/2021/07/09/%E5%BE%AE%E6%9C%BA%E5%AE%9E%E9%AA%8C/</id>
     <published>2021-07-09T10:09:52.000Z</published>
-    <updated>2026-01-05T04:26:26.715Z</updated>
+    <updated>2026-01-09T04:10:17.603Z</updated>
     
     <summary type="html">
     
@@ -223,18 +254,10 @@
     </summary>
     
     
-      <category term="微机原理" scheme="http://kongcm.cn/categories/%E5%BE%AE%E6%9C%BA%E5%8E%9F%E7%90%86/"/>
+      <category term="课程设计" scheme="http://kongcm.cn/categories/%E8%AF%BE%E7%A8%8B%E8%AE%BE%E8%AE%A1/"/>
     
     
-      <category term="80x86" scheme="http://kongcm.cn/tags/80x86/"/>
-    
-      <category term="8250" scheme="http://kongcm.cn/tags/8250/"/>
-    
-      <category term="8259A" scheme="http://kongcm.cn/tags/8259A/"/>
-    
-      <category term="8255" scheme="http://kongcm.cn/tags/8255/"/>
-    
-      <category term="8254" scheme="http://kongcm.cn/tags/8254/"/>
+      <category term="微机原理" scheme="http://kongcm.cn/tags/%E5%BE%AE%E6%9C%BA%E5%8E%9F%E7%90%86/"/>
     
   </entry>
   
@@ -243,7 +266,7 @@
     <link href="http://kongcm.cn/2021/07/08/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%AE%9E%E9%AA%8C%E5%90%88%E9%9B%86/"/>
     <id>http://kongcm.cn/2021/07/08/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%AE%9E%E9%AA%8C%E5%90%88%E9%9B%86/</id>
     <published>2021-07-08T03:02:13.000Z</published>
-    <updated>2026-01-05T05:40:04.946Z</updated>
+    <updated>2026-01-09T04:10:17.603Z</updated>
     
     <summary type="html">
     
@@ -258,7 +281,7 @@
     </summary>
     
     
-      <category term="数据结构" scheme="http://kongcm.cn/categories/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/"/>
+      <category term="课程设计" scheme="http://kongcm.cn/categories/%E8%AF%BE%E7%A8%8B%E8%AE%BE%E8%AE%A1/"/>
     
     
       <category term="链表" scheme="http://kongcm.cn/tags/%E9%93%BE%E8%A1%A8/"/>
@@ -276,7 +299,7 @@
     <link href="http://kongcm.cn/2021/07/06/%E7%AE%97%E6%B3%95%E5%AE%9E%E9%AA%8C%E5%90%88%E9%9B%86/"/>
     <id>http://kongcm.cn/2021/07/06/%E7%AE%97%E6%B3%95%E5%AE%9E%E9%AA%8C%E5%90%88%E9%9B%86/</id>
     <published>2021-07-06T08:56:05.000Z</published>
-    <updated>2026-01-05T04:26:39.952Z</updated>
+    <updated>2026-01-09T04:10:17.604Z</updated>
     
     <summary type="html">
     
@@ -291,7 +314,7 @@
     </summary>
     
     
-      <category term="算法设计与分析" scheme="http://kongcm.cn/categories/%E7%AE%97%E6%B3%95%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%88%86%E6%9E%90/"/>
+      <category term="课程设计" scheme="http://kongcm.cn/categories/%E8%AF%BE%E7%A8%8B%E8%AE%BE%E8%AE%A1/"/>
     
     
       <category term="C++" scheme="http://kongcm.cn/tags/C/"/>
@@ -301,11 +324,11 @@
   </entry>
   
   <entry>
-    <title>Android</title>
+    <title>Android UI效果实现</title>
     <link href="http://kongcm.cn/2021/03/17/Android/"/>
     <id>http://kongcm.cn/2021/03/17/Android/</id>
     <published>2021-03-17T15:38:15.000Z</published>
-    <updated>2026-01-05T04:25:36.268Z</updated>
+    <updated>2026-01-09T04:10:17.601Z</updated>
     
     <summary type="html">
     
@@ -320,7 +343,7 @@
     </summary>
     
     
-      <category term="技术学习" scheme="http://kongcm.cn/categories/%E6%8A%80%E6%9C%AF%E5%AD%A6%E4%B9%A0/"/>
+      <category term="技术" scheme="http://kongcm.cn/categories/%E6%8A%80%E6%9C%AF/"/>
     
     
       <category term="Android UI" scheme="http://kongcm.cn/tags/Android-UI/"/>
@@ -355,34 +378,6 @@
       <category term="Git" scheme="http://kongcm.cn/tags/Git/"/>
     
       <category term="Hexo部署" scheme="http://kongcm.cn/tags/Hexo%E9%83%A8%E7%BD%B2/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>数据结构疑问</title>
-    <link href="http://kongcm.cn/2021/03/16/DSQuestion/"/>
-    <id>http://kongcm.cn/2021/03/16/DSQuestion/</id>
-    <published>2021-03-16T13:55:54.000Z</published>
-    <updated>2026-01-05T04:25:53.562Z</updated>
-    
-    <summary type="html">
-    
-      
-      
-        
-        
-          &lt;p&gt;记录《数据结构》中的一些问题&lt;/p&gt;
-&lt;h4 id=&quot;1-时间复杂度O-1-与O-n-的区别？&quot;&gt;&lt;a href=&quot;#1-时间复杂度O-1-与O-n-的区别？&quot; class=&quot;headerlink&quot;
-        
-      
-    
-    </summary>
-    
-    
-      <category term="数据结构" scheme="http://kongcm.cn/categories/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/"/>
-    
-    
-      <category term="数据结构" scheme="http://kongcm.cn/tags/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/"/>
     
   </entry>
   
@@ -473,7 +468,7 @@
     <link href="http://kongcm.cn/2020/10/11/ALi/"/>
     <id>http://kongcm.cn/2020/10/11/ALi/</id>
     <published>2020-10-11T05:35:58.000Z</published>
-    <updated>2026-01-05T04:25:33.352Z</updated>
+    <updated>2026-01-09T04:10:17.601Z</updated>
     
     <summary type="html">
     
@@ -493,7 +488,9 @@
       <category term="Hexo" scheme="http://kongcm.cn/categories/Hexo/"/>
     
     
-      <category term="CDN 解析冲突" scheme="http://kongcm.cn/tags/CDN-%E8%A7%A3%E6%9E%90%E5%86%B2%E7%AA%81/"/>
+      <category term="CDN" scheme="http://kongcm.cn/tags/CDN/"/>
+    
+      <category term="解析冲突" scheme="http://kongcm.cn/tags/%E8%A7%A3%E6%9E%90%E5%86%B2%E7%AA%81/"/>
     
   </entry>
   
@@ -502,7 +499,7 @@
     <link href="http://kongcm.cn/2020/09/26/hexo/"/>
     <id>http://kongcm.cn/2020/09/26/hexo/</id>
     <published>2020-09-26T03:09:24.000Z</published>
-    <updated>2026-01-05T04:26:08.576Z</updated>
+    <updated>2026-01-09T04:10:17.603Z</updated>
     
     <summary type="html">
     
@@ -523,7 +520,11 @@
       <category term="Hexo" scheme="http://kongcm.cn/categories/Hexo/"/>
     
     
-      <category term="hexo 代码高亮 matery" scheme="http://kongcm.cn/tags/hexo-%E4%BB%A3%E7%A0%81%E9%AB%98%E4%BA%AE-matery/"/>
+      <category term="hexo" scheme="http://kongcm.cn/tags/hexo/"/>
+    
+      <category term="代码高亮" scheme="http://kongcm.cn/tags/%E4%BB%A3%E7%A0%81%E9%AB%98%E4%BA%AE/"/>
+    
+      <category term="matery" scheme="http://kongcm.cn/tags/matery/"/>
     
   </entry>
   

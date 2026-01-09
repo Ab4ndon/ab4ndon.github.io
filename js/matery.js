@@ -57,10 +57,10 @@ $(function () {
         fixStyles();
     });
 
-    /*初始化瀑布流布局*/
-    $('#articles').masonry({
-        itemSelector: '.article'
-    });
+    /*初始化瀑布流布局 - 已禁用以支持标准3列布局*/
+    // $('#articles').masonry({
+    //     itemSelector: '.article'
+    // });
 
     AOS.init({
         easing: 'ease-in-out-sine',
@@ -70,6 +70,11 @@ $(function () {
 
     /*文章内容详情的一些初始化特性*/
     let articleInit = function () {
+        // 只在有文章内容时才执行
+        if ($('#articleContent').length === 0 && $('#myGallery').length === 0) {
+            return;
+        }
+        
         $('#articleContent a').attr('target', '_blank');
 
         $('#articleContent img').each(function () {
@@ -77,34 +82,46 @@ $(function () {
             $(this).wrap('<div class="img-item" data-src="' + imgPath + '" data-sub-html=".caption"></div>');
             // 图片添加阴影
             $(this).addClass("img-shadow img-margin");
-            // 图片添加字幕
-            let alt = $(this).attr('alt');
-            let title = $(this).attr('title');
-            let captionText = "";
-            // 如果alt为空，title来替
-            if (alt === undefined || alt === "") {
-                if (title !== undefined && title !== "") {
-                    captionText = title;
-                }
+            // 图片添加字幕 - 已禁用，不显示图片描述
+            // let alt = $(this).attr('alt');
+            // let title = $(this).attr('title');
+            // let captionText = "";
+            // // 如果alt为空，title来替
+            // if (alt === undefined || alt === "") {
+            //     if (title !== undefined && title !== "") {
+            //         captionText = title;
+            //     }
+            // } else {
+            //     captionText = alt;
+            // }
+            // // 字幕不空，添加之
+            // if (captionText !== "") {
+            //     let captionDiv = document.createElement('div');
+            //     captionDiv.className = 'caption';
+            //     let captionEle = document.createElement('b');
+            //     captionEle.className = 'center-caption';
+            //     captionEle.innerText = captionText;
+            //     captionDiv.appendChild(captionEle);
+            //     this.insertAdjacentElement('afterend', captionDiv)
+            // }
+        });
+        
+        // 检查 lightGallery 是否已加载，延迟初始化以确保库已加载
+        function initLightGallery() {
+            if (typeof $.fn.lightGallery !== 'undefined') {
+                $('#articleContent, #myGallery').lightGallery({
+                    selector: '.img-item',
+                    // 启用字幕
+                    subHtmlSelectorRelative: true
+                });
             } else {
-                captionText = alt;
+                // 如果 lightGallery 未加载，延迟重试（仅在文章页）
+                if ($('#articleContent').length > 0 || $('#myGallery').length > 0) {
+                    setTimeout(initLightGallery, 100);
+                }
             }
-            // 字幕不空，添加之
-            if (captionText !== "") {
-                let captionDiv = document.createElement('div');
-                captionDiv.className = 'caption';
-                let captionEle = document.createElement('b');
-                captionEle.className = 'center-caption';
-                captionEle.innerText = captionText;
-                captionDiv.appendChild(captionEle);
-                this.insertAdjacentElement('afterend', captionDiv)
-            }
-        });
-        $('#articleContent, #myGallery').lightGallery({
-            selector: '.img-item',
-            // 启用字幕
-            subHtmlSelectorRelative: true
-        });
+        }
+        initLightGallery();
 
         // progress bar init
         const progressElement = window.document.querySelector('.progress-bar');

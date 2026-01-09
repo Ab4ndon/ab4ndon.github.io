@@ -4,7 +4,7 @@
 
 <head>
     <!-- hexo-inject:begin --><!-- hexo-inject:end --><meta charset="utf-8">
-    <meta name="keywords" content="新电脑迁移hexo, Ab4nd0n">
+    <meta name="keywords" content="新电脑迁移hexo, Ab4nd0n的个人博客">
     <meta name="description" content="记录学习，记录生活。">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -16,7 +16,7 @@
     <!-- Global site tag (gtag.js) - Google Analytics -->
 
 
-    <title>新电脑迁移hexo | Ab4nd0n</title>
+    <title>新电脑迁移hexo | Ab4nd0n的个人博客</title>
     <link rel="icon" type="image/jpeg" href="/medias/touxiang.jpg">
 
     <link rel="stylesheet" type="text/css" href="/libs/awesome/css/all.css">
@@ -27,14 +27,15 @@
     <link rel="stylesheet" type="text/css" href="/css/matery.css">
     <link rel="stylesheet" type="text/css" href="/css/my.css">
     
-    <script src="/libs/jquery/jquery.min.js"></script>
+    <!-- jQuery已移至页面底部以提升首屏加载速度 -->
+    <!-- <script src="/libs/jquery/jquery.min.js"></script> -->
     <link rel="stylesheet" href="/js/prism/prism.css">
 
 
     <!-- 已禁用 hitokoto API 以提升加载速度 -->
     <!-- <script src="https://v1.hitokoto.cn/?c=d&encode=js&select=%23hitokoto" defer></script> -->
 
-<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="Ab4nd0n" type="application/atom+xml"><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+<meta name="generator" content="Hexo 5.4.0"><!-- hexo-inject:begin --><!-- hexo-inject:end --><link rel="alternate" href="/atom.xml" title="Ab4nd0n的个人博客" type="application/atom+xml">
 </head>
 
 
@@ -47,7 +48,7 @@
                     
                     <img src="/medias/touxiang.jpg" class="logo-img" alt="LOGO">
                     
-                    <span class="logo-span">Ab4nd0n</span>
+                    <span class="logo-span">Ab4nd0n的个人博客</span>
                 </a>
             </div>
             
@@ -146,7 +147,7 @@
         
         <img src="/medias/touxiang.jpg" class="logo-img circle responsive-img">
         
-        <div class="logo-name">Ab4nd0n</div>
+        <div class="logo-name">Ab4nd0n的个人博客</div>
         <div class="logo-desc">
             
             记录学习，记录生活。
@@ -326,8 +327,20 @@
     }
 
     #toc-content {
-        height: calc(100vh - 250px);
-        overflow: auto;
+        max-height: calc(100vh - 250px);
+        overflow-y: auto;
+        overflow-x: hidden;
+        min-height: 20px; /* 确保有最小高度 */
+    }
+    
+    /* 如果目录内容为空，显示提示 */
+    #toc-content:empty::after {
+        content: "暂无目录";
+        display: block;
+        text-align: center;
+        color: #999;
+        padding: 20px;
+        font-size: 0.9rem;
     }
 
     #toc-content ol {
@@ -614,133 +627,6 @@ images/
 
                 </div>
             </div>
-            
-                <style>
-    #reward {
-        margin: 40px 0;
-        text-align: center;
-    }
-
-    #reward .reward-link {
-        font-size: 1.4rem;
-        line-height: 38px;
-    }
-
-    #reward .btn-floating:hover {
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2), 0 5px 15px rgba(0, 0, 0, 0.2);
-    }
-
-    #rewardModal {
-        width: 320px;
-        height: 350px;
-    }
-
-    #rewardModal .reward-title {
-        margin: 15px auto;
-        padding-bottom: 5px;
-    }
-
-    #rewardModal .modal-content {
-        padding: 10px;
-    }
-
-    #rewardModal .close {
-        position: absolute;
-        right: 15px;
-        top: 15px;
-        color: rgba(0, 0, 0, 0.5);
-        font-size: 1.3rem;
-        line-height: 20px;
-        cursor: pointer;
-    }
-
-    #rewardModal .close:hover {
-        color: #ef5350;
-        transform: scale(1.3);
-        -moz-transform:scale(1.3);
-        -webkit-transform:scale(1.3);
-        -o-transform:scale(1.3);
-    }
-
-    #rewardModal .reward-tabs {
-        margin: 0 auto;
-        width: 210px;
-    }
-
-    .reward-tabs .tabs {
-        height: 38px;
-        margin: 10px auto;
-        padding-left: 0;
-    }
-
-    .reward-content ul {
-        padding-left: 0 !important;
-    }
-
-    .reward-tabs .tabs .tab {
-        height: 38px;
-        line-height: 38px;
-    }
-
-    .reward-tabs .tab a {
-        color: #fff;
-        background-color: #ccc;
-    }
-
-    .reward-tabs .tab a:hover {
-        background-color: #ccc;
-        color: #fff;
-    }
-
-    .reward-tabs .wechat-tab .active {
-        color: #fff !important;
-        background-color: #22AB38 !important;
-    }
-
-    .reward-tabs .alipay-tab .active {
-        color: #fff !important;
-        background-color: #019FE8 !important;
-    }
-
-    .reward-tabs .reward-img {
-        width: 210px;
-        height: 210px;
-    }
-</style>
-
-<div id="reward">
-    <a href="#rewardModal" class="reward-link modal-trigger btn-floating btn-medium waves-effect waves-light red">赏</a>
-
-    <!-- Modal Structure -->
-    <div id="rewardModal" class="modal">
-        <div class="modal-content">
-            <a class="close modal-close"><i class="fas fa-times"></i></a>
-            <h4 class="reward-title">你的赏识是我前进的动力</h4>
-            <div class="reward-content">
-                <div class="reward-tabs">
-                    <ul class="tabs row">
-                        <li class="tab col s6 alipay-tab waves-effect waves-light"><a href="#alipay">支付宝</a></li>
-                        <li class="tab col s6 wechat-tab waves-effect waves-light"><a href="#wechat">微 信</a></li>
-                    </ul>
-                    <div id="alipay">
-                        <img src="/medias/reward/alipay.jpg" class="reward-img" alt="支付宝打赏二维码">
-                    </div>
-                    <div id="wechat">
-                        <img src="/medias/reward/wechat.png" class="reward-img" alt="微信打赏二维码">
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    $(function () {
-        $('.tabs').tabs();
-    });
-</script>
-
-            
         </div>
     </div>
 
@@ -1115,8 +1001,8 @@ images/
                             
                             <i class="fas fa-bookmark fa-fw icon-category"></i>
                             
-                            <a href="/categories/%E6%8A%A5%E9%94%99%E5%A4%84%E7%90%86/" class="post-category">
-                                    报错处理
+                            <a href="/categories/%E6%8A%80%E6%9C%AF/" class="post-category">
+                                    技术
                                 </a>
                             
                             
@@ -1146,23 +1032,50 @@ images/
 
 
 
-<!-- 代码块功能依赖 -->
-<script type="text/javascript" src="/libs/codeBlock/codeBlockFuction.js"></script>
-
-<!-- 代码语言 -->
-
-<script type="text/javascript" src="/libs/codeBlock/codeLang.js"></script>
-
-
-<!-- 代码块复制 -->
-
-<script type="text/javascript" src="/libs/codeBlock/codeCopy.js"></script>
-
-
-<!-- 代码块收缩 -->
-
-<script type="text/javascript" src="/libs/codeBlock/codeShrink.js"></script>
-
+<!-- 代码块功能依赖 - 延迟加载确保jQuery已加载 -->
+<script>
+    // 等待jQuery加载完成后再加载代码块相关脚本
+    (function() {
+        function loadScript(src, callback) {
+            var script = document.createElement('script');
+            script.src = src;
+            if (callback) {
+                script.onload = callback;
+            }
+            document.body.appendChild(script);
+        }
+        
+        function loadCodeBlockScripts() {
+            if (typeof $ !== 'undefined') {
+                // 按顺序加载代码块相关脚本
+                loadScript('/libs/codeBlock/codeBlockFuction.js', function() {
+                    
+                    loadScript('/libs/codeBlock/codeLang.js', function() {
+                        
+                        loadScript('/libs/codeBlock/codeCopy.js', function() {
+                            
+                            loadScript('/libs/codeBlock/codeShrink.js');
+                            
+                        });
+                        
+                    });
+                    
+                });
+            } else {
+                // jQuery未加载，延迟重试
+                setTimeout(loadCodeBlockScripts, 100);
+            }
+        }
+        
+        // 如果DOM已加载，立即尝试；否则等待DOM加载完成
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadCodeBlockScripts);
+        } else {
+            // DOM已加载，但可能jQuery还没加载，延迟一点再试
+            setTimeout(loadCodeBlockScripts, 200);
+        }
+    })();
+</script>
 
 <!-- 代码块折行 -->
 
@@ -1179,92 +1092,151 @@ images/
 <!-- TOC 悬浮按钮. -->
 
 <div id="floating-toc-btn" class="hide-on-med-and-down">
-    <a class="btn-floating btn-large bg-color">
+    <a class="btn-floating btn-large bg-color tooltipped" data-tooltip="展开目录" data-position="left" data-delay="50" id="toc-toggle-btn">
         <i class="fas fa-list-ul"></i>
     </a>
 </div>
 
 
-<script src="/libs/tocbot/tocbot.min.js"></script>
+<script src="/libs/tocbot/tocbot.min.js" defer></script>
 <script>
-    $(function () {
-        tocbot.init({
-            tocSelector: '#toc-content',
-            contentSelector: '#articleContent',
-            headingsOffset: -($(window).height() * 0.4 - 45),
-            collapseDepth: Number('0'),
-            headingSelector: 'h1, h2, h3, h4, h5, h6'
-        });
-        
-        // 强制展开所有目录项
-        setTimeout(function() {
-            $('#toc-content .is-collapsed').removeClass('is-collapsed').addClass('is-collapsible');
-            $('#toc-content .is-collapsible').css('max-height', '1000px');
-        }, 100);
+    // 等待jQuery和tocbot加载完成后再初始化
+    (function() {
+        function initTocbot() {
+            // 检查jQuery和tocbot是否都已加载
+            if (typeof $ !== 'undefined' && typeof tocbot !== 'undefined' && $('#articleContent').length > 0) {
+                try {
+                    // 检查是否有标题元素
+                    var headingSelector = 'h1, h2, h3, h4, h5, h6';
+                    var headings = $('#articleContent').find(headingSelector);
+                    if (headings.length === 0) {
+                        console.log('文章中没有找到标题元素，无法生成目录');
+                        return;
+                    }
+                    
+                    // 初始化tocbot
+                    tocbot.init({
+                        tocSelector: '#toc-content',
+                        contentSelector: '#articleContent',
+                        headingsOffset: -($(window).height() * 0.4 - 45),
+                        collapseDepth: Number('0'),
+                        headingSelector: 'h1, h2, h3, h4, h5, h6'
+                    });
+                    
+                    // 检查目录是否生成成功
+                    setTimeout(function() {
+                        if ($('#toc-content').children().length === 0) {
+                            console.warn('目录生成失败，请检查文章标题格式');
+                        }
+                    }, 500);
+                    
+                    // 强制展开所有目录项
+                    setTimeout(function() {
+                        $('#toc-content .is-collapsed').removeClass('is-collapsed').addClass('is-collapsible');
+                        $('#toc-content .is-collapsible').css('max-height', '1000px');
+                    }, 100);
 
-        // modify the toc link href to support Chinese.
-        let i = 0;
-        let tocHeading = 'toc-heading-';
-        $('#toc-content a').each(function () {
-            $(this).attr('href', '#' + tocHeading + (++i));
-        });
+                    // modify the toc link href to support Chinese.
+                    let i = 0;
+                    let tocHeading = 'toc-heading-';
+                    $('#toc-content a').each(function () {
+                        $(this).attr('href', '#' + tocHeading + (++i));
+                    });
 
-        // modify the heading title id to support Chinese.
-        i = 0;
-        $('#articleContent').children('h1, h2, h3, h4, h5, h6').each(function () {
-            $(this).attr('id', tocHeading + (++i));
-        });
+                    // modify the heading title id to support Chinese.
+                    i = 0;
+                    $('#articleContent').children('h1, h2, h3, h4, h5, h6').each(function () {
+                        $(this).attr('id', tocHeading + (++i));
+                    });
 
-        // Set scroll toc fixed.
-        let tocHeight = parseInt($(window).height() * 0.4 - 64);
-        let $tocWidget = $('.toc-widget');
-        $(window).scroll(function () {
-            let scroll = $(window).scrollTop();
-            /* add post toc fixed. */
-            if (scroll > tocHeight) {
-                $tocWidget.addClass('toc-fixed');
+                    // Set scroll toc fixed.
+                    let tocHeight = parseInt($(window).height() * 0.4 - 64);
+                    let $tocWidget = $('.toc-widget');
+                    $(window).scroll(function () {
+                        let scroll = $(window).scrollTop();
+                        /* add post toc fixed. */
+                        if (scroll > tocHeight) {
+                            $tocWidget.addClass('toc-fixed');
+                        } else {
+                            $tocWidget.removeClass('toc-fixed');
+                        }
+                    });
+
+                    
+                    /* 修复文章卡片 div 的宽度. */
+                    let fixPostCardWidth = function (srcId, targetId) {
+                        let srcDiv = $('#' + srcId);
+                        if (srcDiv.length === 0) {
+                            return;
+                        }
+
+                        let w = srcDiv.width();
+                        if (w >= 450) {
+                            w = w + 21;
+                        } else if (w >= 350 && w < 450) {
+                            w = w + 18;
+                        } else if (w >= 300 && w < 350) {
+                            w = w + 16;
+                        } else {
+                            w = w + 14;
+                        }
+                        $('#' + targetId).width(w);
+                    };
+
+                    // 切换TOC目录展开收缩的相关操作.
+                    const expandedClass = 'expanded';
+                    let $tocAside = $('#toc-aside');
+                    let $mainContent = $('#main-content');
+                    let $tocBtn = $('#floating-toc-btn .btn-floating');
+                    
+                    // 初始化 tooltip - 根据当前目录状态设置提示文字
+                    function updateTooltip() {
+                        if (typeof M !== 'undefined' && M.Tooltip) {
+                            let instance = M.Tooltip.getInstance($tocBtn[0]);
+                            if (instance) {
+                                instance.destroy();
+                            }
+                            let tooltipText = $tocAside.hasClass(expandedClass) ? '隐藏目录' : '展开目录';
+                            M.Tooltip.init($tocBtn[0], {
+                                html: tooltipText,
+                                position: 'left'
+                            });
+                        }
+                    }
+                    
+                    // 初始化 tooltip
+                    updateTooltip();
+                    
+                    $tocBtn.click(function () {
+                        if ($tocAside.hasClass(expandedClass)) {
+                            $tocAside.removeClass(expandedClass).hide();
+                            $mainContent.removeClass('l9');
+                        } else {
+                            $tocAside.addClass(expandedClass).show();
+                            $mainContent.addClass('l9');
+                        }
+                        // 更新 tooltip 文本
+                        updateTooltip();
+                        fixPostCardWidth('artDetail', 'prenext-posts');
+                    });
+                    
+                } catch (e) {
+                    console.error('TOC初始化错误:', e);
+                }
             } else {
-                $tocWidget.removeClass('toc-fixed');
+                // 如果依赖未加载完成，延迟重试
+                setTimeout(initTocbot, 100);
             }
-        });
-
+        }
         
-        /* 修复文章卡片 div 的宽度. */
-        let fixPostCardWidth = function (srcId, targetId) {
-            let srcDiv = $('#' + srcId);
-            if (srcDiv.length === 0) {
-                return;
-            }
-
-            let w = srcDiv.width();
-            if (w >= 450) {
-                w = w + 21;
-            } else if (w >= 350 && w < 450) {
-                w = w + 18;
-            } else if (w >= 300 && w < 350) {
-                w = w + 16;
-            } else {
-                w = w + 14;
-            }
-            $('#' + targetId).width(w);
-        };
-
-        // 切换TOC目录展开收缩的相关操作.
-        const expandedClass = 'expanded';
-        let $tocAside = $('#toc-aside');
-        let $mainContent = $('#main-content');
-        $('#floating-toc-btn .btn-floating').click(function () {
-            if ($tocAside.hasClass(expandedClass)) {
-                $tocAside.removeClass(expandedClass).hide();
-                $mainContent.removeClass('l9');
-            } else {
-                $tocAside.addClass(expandedClass).show();
-                $mainContent.addClass('l9');
-            }
-            fixPostCardWidth('artDetail', 'prenext-posts');
-        });
-        
-    });
+        // 如果DOM已加载，立即尝试初始化；否则等待DOM加载完成
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initTocbot);
+        } else {
+            // DOM已加载，但可能jQuery或tocbot还没加载，延迟一点再试
+            setTimeout(initTocbot, 200);
+        }
+    })();
 </script>
 
     
@@ -1278,15 +1250,21 @@ images/
     
     <div class="container row center-align" style="margin-bottom: 15px !important;">
         <div class="col s12 m8 l8 copy-right">
+            
+            <span id="icp"><img src="/medias/icp.png" style="vertical-align: text-bottom;" />
+                <a href="https://beian.miit.gov.cn/" target="_blank">苏ICP备2020057407号-1</a>
+            </span>
+            
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
             Copyright&nbsp;&copy;
             <span id="year">2020</span>
             <a href="/about" target="_blank">Ab4nd0n</a>
             |&nbsp;Powered by&nbsp;<a href="https://hexo.io/" target="_blank">Hexo</a>
-            |&nbsp;Theme&nbsp;<a href="https://github.com/blinkfox/hexo-theme-matery" target="_blank">Matery</a>
+            |&nbsp;Theme&nbsp;<a href="https://github.com/Ab4ndon" target="_blank">Matery</a>
             <br>
             
             &nbsp;<i class="fas fa-chart-area"></i>&nbsp;站点总字数:&nbsp;<span
-                class="white-color">66.7k</span>&nbsp;字
+                class="white-color">67.6k</span>&nbsp;字
             
             
             
@@ -1304,9 +1282,8 @@ images/
                     class="white-color"></span>&nbsp;人
             </span>
             
-            <br>
             
-            <span id="sitetime">载入运行时间...</span>
+            |&nbsp;<span id="sitetime">载入运行时间...</span>
             <script>
                 function siteTime() {
                     var seconds = 1000;
@@ -1350,14 +1327,12 @@ images/
                 setInterval(siteTime, 1000);
             </script>
             
-            <br>
-            
-            <span id="icp"><img src="/medias/icp.png" style="vertical-align: text-bottom;" />
-                <a href="https://beian.miit.gov.cn/" target="_blank">苏ICP备2020057407号-1</a>
-            </span>
-            
         </div>
         <div class="col s12 m4 l4 social-link social-statis">
+    <a href="https://github.com/Ab4ndon" class="tooltipped" target="_blank" data-tooltip="访问我的GitHub" data-position="top" data-delay="50">
+        <i class="fab fa-github"></i>
+    </a>
+
 
 
     <a href="mailto:2829493640@qq.com" class="tooltipped" target="_blank" data-tooltip="邮件联系我" data-position="top" data-delay="50">
@@ -1419,32 +1394,31 @@ $(function () {
 </div>
 
 
+    <!-- 关键脚本：jQuery和Materialize需要优先加载（首页轮播等功能依赖） -->
+    <script src="/libs/jquery/jquery.min.js"></script>
     <script src="/libs/materialize/materialize.min.js"></script>
-    <script src="/libs/masonry/masonry.pkgd.min.js"></script>
-    <script src="/libs/aos/aos.js"></script>
-    <script src="/libs/scrollprogress/scrollProgress.min.js"></script>
-    <script src="/libs/lightGallery/js/lightgallery-all.min.js"></script>
+    
+    <!-- 核心功能脚本 -->
     <script src="/js/matery.js"></script>
-
-    <script src="/js/FunnyTitle.js"></script>
+    
+    <!-- 非关键脚本：使用defer延迟加载，不阻塞页面渲染 -->
+    <script src="/libs/aos/aos.js" defer></script>
+    <script src="/libs/scrollprogress/scrollProgress.min.js" defer></script>
+    <script src="/js/FunnyTitle.js" defer></script>
+    
+    <!-- 条件加载：masonry主要用于某些页面布局，首页通常不需要 -->
+    
+    <script src="/libs/masonry/masonry.pkgd.min.js" defer></script>
+    
+    
+    <!-- lightgallery主要用于文章页图片展示，首页延迟加载 -->
+    
+    <script src="/libs/lightGallery/js/lightgallery-all.min.js" defer></script>
+    
     
     <!-- Baidu Analytics -->
 
     <!-- Baidu Push -->
-
-<script>
-    (function () {
-        var bp = document.createElement('script');
-        var curProtocol = window.location.protocol.split(':')[0];
-        if (curProtocol === 'https') {
-            bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
-        } else {
-            bp.src = 'http://push.zhanzhang.baidu.com/push.js';
-        }
-        var s = document.getElementsByTagName("script")[0];
-        s.parentNode.insertBefore(bp, s);
-    })();
-</script>
 
     
     
@@ -1461,6 +1435,8 @@ $(function () {
 
     
 
+    
+    <script src="/libs/instantpage/instantpage.js" type="module"></script>
     
 
     <!-- <script type="text/javascript">
